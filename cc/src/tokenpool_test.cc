@@ -43,10 +43,10 @@ const double kLoadAverageDefault = -1.23456789;
 
 struct TokenPoolTest : public testing::Test {
   double load_avg_;
-  TokenPool *tokens_;
+  TokenPool* tokens_;
   char buf_[1024];
 #ifdef _WIN32
-  const char *semaphore_name_;
+  const char* semaphore_name_;
   HANDLE semaphore_;
 #else
   int fds_[2];
@@ -65,7 +65,7 @@ struct TokenPoolTest : public testing::Test {
       ASSERT_TRUE(false);
   }
 
-  void CreatePool(const char *format, bool ignore_jobserver = false) {
+  void CreatePool(const char* format, bool ignore_jobserver = false) {
     if (format) {
       sprintf(buf_, format,
 #ifdef _WIN32
@@ -209,7 +209,7 @@ TEST_F(TokenPoolTest, TwoTokens) {
   tokens_->Release();
   EXPECT_TRUE(tokens_->Acquire());
 
-  // release implict token - must return 2nd token back to jobserver
+  // release implicit token - must return 2nd token back to jobserver
   tokens_->Release();
   EXPECT_TRUE(tokens_->Acquire());
 

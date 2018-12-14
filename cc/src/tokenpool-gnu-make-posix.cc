@@ -32,8 +32,8 @@ struct GNUmakeTokenPoolPosix : public GNUmakeTokenPool {
 
   virtual int GetMonitorFd();
 
-  virtual const char *GetEnv(const char *name) { return getenv(name); };
-  virtual bool ParseAuth(const char *jobserver);
+  virtual const char* GetEnv(const char* name) { return getenv(name); };
+  virtual bool ParseAuth(const char* jobserver);
   virtual bool AcquireToken();
   virtual bool ReturnToken();
 
@@ -64,9 +64,7 @@ bool GNUmakeTokenPoolPosix::CheckFd(int fd) {
   if (fd < 0)
     return false;
   int ret = fcntl(fd, F_GETFD);
-  if (ret < 0)
-    return false;
-  return true;
+  return ret >= 0;
 }
 
 int GNUmakeTokenPoolPosix::dup_rfd_ = -1;
@@ -82,14 +80,13 @@ bool GNUmakeTokenPoolPosix::SetAlarmHandler() {
   act.sa_handler = CloseDupRfd;
   if (sigaction(SIGALRM, &act, &old_act_) < 0) {
     perror("sigaction:");
-    return(false);
-  } else {
-    restore_ = true;
-    return(true);
+    return false;
   }
+  restore_ = true;
+  return true;
 }
 
-bool GNUmakeTokenPoolPosix::ParseAuth(const char *jobserver) {
+bool GNUmakeTokenPoolPosix::ParseAuth(const char* jobserver) {
   int rfd = -1;
   int wfd = -1;
   if ((sscanf(jobserver, "%*[^=]=%d,%d", &rfd, &wfd) == 2) &&
@@ -195,9 +192,9 @@ bool GNUmakeTokenPoolPosix::ReturnToken() {
 }
 
 int GNUmakeTokenPoolPosix::GetMonitorFd() {
-  return(rfd_);
+  return rfd_;
 }
 
-struct TokenPool *TokenPool::Get() {
+TokenPool* TokenPool::Get() {
   return new GNUmakeTokenPoolPosix;
 }
