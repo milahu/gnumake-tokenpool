@@ -10,4 +10,16 @@ npm install @milahu/gnumake-jobclient
 
 ## usage
 
-see [test/test.mjs](test/test.mjs)
+```js
+import { Jobclient } from '@milahu/gnumake-jobclient';
+
+const jobclient = await Jobclient();
+
+const token = await jobclient.acquire();
+
+// do some work
+
+await jobclient.release(token);
+```
+
+see also [test/test.mjs](test/test.mjs)
