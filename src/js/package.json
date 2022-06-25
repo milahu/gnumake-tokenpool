@@ -1,0 +1,14 @@
+{
+  "name": "@milahu/gnumake-jobclient",
+  "version": "0.0.1",
+  "description": "client for the gnu make jobserver",
+  "main": "gnumake-jobclient.mjs",
+  "type": "module",
+  "scripts": {
+    "test": "./test/test.sh"
+  },
+  "keywords": ["gnu", "make", "gnumake", "jobclient", "jobserver"],
+  "author": "milahu",
+  "license": "MIT",
+  "homepage": "https://github.com/milahu/gnumake-jobclient-js"
+}
