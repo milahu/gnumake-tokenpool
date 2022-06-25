@@ -49,6 +49,7 @@ export async function Jobclient() {
   // jobclient
   const jobclient = {
     acquire: async () => {
+      // non-blocking. throws { errno: -11 } if jobserver is full
       const result = await fs.promises.read(fdRead, buffer);
       if (result.bytesRead != 1) throw new Error('read failed');
       return buffer.readInt8();
@@ -58,7 +59,7 @@ export async function Jobclient() {
       const result = await fs.promises.write(fdWrite, buffer);
       if (result.bytesWritten != 1) throw new Error('write failed');
     },
-    // read only properties
+    // read-only properties
     maxTokens: () => (maxJobs - 1), // one job is used by make
     maxJobs: () => maxJobs,
     maxLoad: () => maxLoad,
