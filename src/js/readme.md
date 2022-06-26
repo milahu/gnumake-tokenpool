@@ -29,3 +29,12 @@ jobClient.release(token);
 ```
 
 see also [test/test.mjs](test/test.mjs)
+
+## similar projects
+
+* https://github.com/olsner/jobclient
+* https://github.com/milahu/gnumake-jobclient-py
+
+## related
+
+* [ninja with jobclient and jobserver](https://gitlab.kitware.com/cmake/cmake/-/issues/21597)
