@@ -37,7 +37,7 @@ else {
       break;
     }
     tokenList.push(token);
-    console.log(`test: acquired token ${token}. tokenList.length = ${tokenList.length}`);
+    console.log(`test: acquired token ${token}. tokenList.length = ${tokenList.length}. jobClient.numTokens() = ${jobClient.numTokens()}`);
     //await sleep(100);
   }
 
@@ -50,7 +50,7 @@ else {
       console.log(`test: ok: jobserver is full`);
     }
     else {
-      console.log(`test: error: acquired token ${token}. tokenList.length = ${tokenList.length}`);
+      console.log(`test: error: acquired token ${token}. tokenList.length = ${tokenList.length}. jobClient.numTokens() = ${jobClient.numTokens()}`);
     }
   }
   catch (e) {
@@ -60,7 +60,7 @@ else {
   while (tokenList.length > 0) {
     const token = tokenList.pop();
     jobClient.release(token);
-    console.log(`test: released token ${token}. tokenList.length = ${tokenList.length}`);
+    console.log(`test: released token ${token}. tokenList.length = ${tokenList.length}. jobClient.numTokens() = ${jobClient.numTokens()}`);
     //await sleep(100);
   }
 }
