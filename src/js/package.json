@@ -1,9 +1,16 @@
 {
   "name": "@milahu/gnumake-jobclient",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "client for the gnu make jobserver",
-  "main": "gnumake-jobclient.mjs",
-  "type": "module",
+  "main": "./JobClient.js",
+  "types": "./JobClient.d.ts",
+  "exports": {
+    ".": {
+      "default": "./JobClient.js",
+      "types": "./JobClient.d.ts"
+    },
+    "./package.json": "./package.json"
+  },
   "scripts": {
     "test": "./test/test.sh"
   },

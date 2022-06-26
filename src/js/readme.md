@@ -8,18 +8,24 @@ javascript client for the GNU make jobserver
 npm install @milahu/gnumake-jobclient
 ```
 
+or
+
+```
+npm install gnumake-jobclient@github:milahu/gnumake-jobclient-js
+```
+
 ## usage
 
 ```js
-import { Jobclient } from '@milahu/gnumake-jobclient';
+import { JobClient } from '@milahu/gnumake-jobclient';
 
-const jobclient = await Jobclient();
+const jobClient = JobClient();
 
-const token = await jobclient.acquire();
+const token = jobClient.acquire();
 
 // do some work
 
-await jobclient.release(token);
+jobClient.release(token);
 ```
 
 see also [test/test.mjs](test/test.mjs)
