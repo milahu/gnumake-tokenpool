@@ -20,6 +20,9 @@ else {
 
   const tokenList = [];
 
+  // NOTE n-1 error: dont acquire token for the first worker
+  // only acquire tokens if we need 2 or more workers (parallelism)
+  // assumption: the worker-scheduler produces zero cpu load
   for (let i = 0; i < jobClient.maxJobs(); i++) {
     let token;
     try {
