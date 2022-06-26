@@ -75,6 +75,7 @@ exports.JobClient = function JobClient() {
   debug(`fdRead = ${fdRead}, fdWrite = ${fdWrite}, maxJobs = ${maxJobs}, maxLoad = ${maxLoad}`);
   if (maxJobs == 1) {
     debug(`maxJobs == 1 -> jobserver off`);
+    return null;
   }
   if (fdRead == undefined) return null;
 
