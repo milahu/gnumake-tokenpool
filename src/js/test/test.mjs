@@ -7,26 +7,30 @@ import { JobClient } from '../JobClient.js';
 
 //console.log(`test: ${process.argv.slice(2).join(' ')}`);
 
-const jobclient = JobClient();
+const jobClient = JobClient();
 
-if (!jobclient) {
-  console.log(`test: jobclient init failed`);
+if (!jobClient) {
+  console.log(`test: jobClient init failed`);
 }
 else {
-  console.log(`test: jobclient init ok`);
+  console.log(`test: jobClient init ok`);
 
-  console.log(`test: jobclient maxJobs = ${jobclient.maxJobs()}`);
-  console.log(`test: jobclient maxLoad = ${jobclient.maxLoad()}`);
+  console.log(`test: jobClient maxJobs = ${jobClient.maxJobs()}`);
+  console.log(`test: jobClient maxLoad = ${jobClient.maxLoad()}`);
 
   const tokenList = [];
 
-  for (let i = 0; i < jobclient.maxJobs(); i++) {
+  for (let i = 0; i < jobClient.maxJobs(); i++) {
     let token;
     try {
-      token = jobclient.acquire();
+      token = jobClient.acquire();
     }
     catch (e) {
       console.log(`test: failed to acquire token: ${e}`);
+      break;
+    }
+    if (token == null) {
+      console.log(`test: failed to acquire token: jobserver is full`);
       break;
     }
     tokenList.push(token);
@@ -38,21 +42,21 @@ else {
   // try one more -> should fail
   let token;
   try {
-    token = jobclient.acquire();
-    console.log(`test: error: acquired token ${token}. tokenList.length = ${tokenList.length}`);
-  }
-  catch (e) {
-    if (e.errno == -11) {
-      console.log(`test: acquired all tokens`);
+    token = jobClient.acquire();
+    if (token == null) {
+      console.log(`test: ok: jobserver is full`);
     }
     else {
-      throw e;
+      console.log(`test: error: acquired token ${token}. tokenList.length = ${tokenList.length}`);
     }
+  }
+  catch (e) {
+    console.log(`test: failed to acquire token: ${e}`);
   }
 
   while (tokenList.length > 0) {
     const token = tokenList.pop();
-    jobclient.release(token);
+    jobClient.release(token);
     console.log(`test: released token ${token}. tokenList.length = ${tokenList.length}`);
     //await sleep(100);
   }
