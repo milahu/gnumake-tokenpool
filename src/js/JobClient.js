@@ -1,7 +1,13 @@
 // jobclient for the gnumake jobserver
+
 // based on https://github.com/olsner/jobClient/blob/master/jobClient.h
 // license: MIT
 // copyright: (c) 2022 Milan Hauth <milahu@gmail.com>
+
+// NOTE n-1 error
+// make counts this jobclient as one job
+// so we dont need a token for the first worker (serial processing).
+// we only need tokens for 2 or more workers (parallel processing).
 
 // NOTE maxJobs
 // maxJobs is the global limit for all make jobs,
@@ -75,6 +81,8 @@ exports.JobClient = function JobClient() {
   const buffer = Buffer.alloc(1);
 
   let numTokens = 0;
+
+  // TODO track tokens?
 
   const jobClient = {
     acquire: () => {
