@@ -9,4 +9,5 @@ export type JobClient = {
     // read-only properties
     maxJobs: () => number,
     maxLoad: () => number | undefined,
+    numTokens: () => number,
 };

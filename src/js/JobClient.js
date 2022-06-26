@@ -68,6 +68,8 @@ exports.JobClient = function JobClient() {
 
   const buffer = Buffer.alloc(1);
 
+  let numTokens = 0;
+
   const jobClient = {
     acquire: () => {
       let bytesRead = 0;
@@ -84,6 +86,7 @@ exports.JobClient = function JobClient() {
       if (bytesRead != 1) throw new Error('read failed');
       const token = buffer.readInt8();
       debug(`acquire: token = ${token}`);
+      numTokens++;
       return token;
     },
     release: (token) => {
@@ -99,11 +102,13 @@ exports.JobClient = function JobClient() {
         throw e;
       }
       if (bytesWritten != 1) throw new Error('write failed');
+      numTokens--;
       return true; // success
     },
     // read-only properties
     maxJobs: () => (maxJobs - 1), // one job is used by make
     maxLoad: () => maxLoad,
+    numTokens: () => numTokens,
   };
 
   // test acquire + release
