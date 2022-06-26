@@ -3,6 +3,12 @@
 // license: MIT
 // copyright: (c) 2022 Milan Hauth <milahu@gmail.com>
 
+// NOTE maxJobs
+// maxJobs is the global limit for all make jobs,
+// so this jobclient can get less than (maxJobs-1) tokens.
+// to find the maximum number of free tokens,
+// you must acquire them all.
+
 const process = require('process');
 const fs = require('fs');
 
@@ -106,7 +112,7 @@ exports.JobClient = function JobClient() {
       return true; // success
     },
     // read-only properties
-    maxJobs: () => (maxJobs - 1), // one job is used by make
+    maxJobs: () => maxJobs,
     maxLoad: () => maxLoad,
     numTokens: () => numTokens,
   };
