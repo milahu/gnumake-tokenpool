@@ -122,6 +122,25 @@ exports.JobClient = function JobClient() {
     maxLoad: { value: maxLoad, enumerable: true },
   });
 
+  // TODO check fds
+  // examples:
+  // MAKEFLAGS="--jobserver-auth=3,4 -l32"
+  // ls -nlv /proc/self/fd/
+  //
+  // jobserver on:
+  // lr-x------ 1 1000 100 64 Jun 27 14:29 3 -> pipe:[102600042]
+  // l-wx------ 1 1000 100 64 Jun 27 14:29 4 -> pipe:[102600042]
+  //
+  // jobserver off:
+  // lr-x------ 1 1000 100 64 Jun 27 14:29 3 -> /proc/2370722/fd
+  //
+  // conditions for jobserver on:
+  // * fds 3 and 4 are connected
+  // * fd 3 is readable
+  // * fd 4 is writable
+  // * fds 3 and 4 are pipes
+  // * fds 3 and 4 are pipes with the same ID (?)
+
   // test acquire + release
   let token = null;
   try {
