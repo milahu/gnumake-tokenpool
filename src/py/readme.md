@@ -22,7 +22,7 @@ token = jobClient.acquire()
 jobClient.release(token)
 ```
 
-see also [test/test.py](test/test.py)
+see also [test/jobclient/test.py](test/jobclient/test.py)
 
 ## similar projects
 
