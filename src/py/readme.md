@@ -31,4 +31,5 @@ see also [test/jobclient/test.py](test/jobclient/test.py)
 
 ## related
 
+* [GNU make jobserver implementation](http://make.mad-scientist.net/papers/jobserver-implementation/)
 * [ninja with jobclient and jobserver](https://gitlab.kitware.com/cmake/cmake/-/issues/21597)
