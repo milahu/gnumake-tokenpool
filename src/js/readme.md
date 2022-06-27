@@ -11,7 +11,7 @@ npm install @milahu/gnumake-jobclient
 or
 
 ```
-npm install gnumake-jobclient@github:milahu/gnumake-jobclient-js
+npm install github:milahu/gnumake-jobclient-js
 ```
 
 ## usage
