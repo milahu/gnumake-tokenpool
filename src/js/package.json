@@ -1,6 +1,6 @@
 {
   "name": "@milahu/gnumake-jobclient",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "client for the gnu make jobserver",
   "main": "./JobClient.js",
   "types": "./JobClient.d.ts",
