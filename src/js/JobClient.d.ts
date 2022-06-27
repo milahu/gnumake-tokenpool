@@ -1,5 +1,4 @@
 declare module '@milahu/gnumake-jobclient';
-declare module 'gnumake-jobclient'; // alias
 
 export function JobClient(): JobClient | null;
 
