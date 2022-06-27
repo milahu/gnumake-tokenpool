@@ -81,10 +81,6 @@ exports.JobClient = function JobClient() {
 
   const buffer = Buffer.alloc(1);
 
-  let numTokens = 0;
-
-  // TODO track tokens?
-
   const jobClient = {
     acquire: () => {
       let bytesRead = 0;
@@ -101,7 +97,6 @@ exports.JobClient = function JobClient() {
       if (bytesRead != 1) throw new Error('read failed');
       const token = buffer.readInt8();
       debug(`acquire: token = ${token}`);
-      numTokens++;
       return token;
     },
     release: (token) => {
@@ -117,14 +112,15 @@ exports.JobClient = function JobClient() {
         throw e;
       }
       if (bytesWritten != 1) throw new Error('write failed');
-      numTokens--;
       return true; // success
     },
-    // read-only properties
-    maxJobs: () => maxJobs,
-    maxLoad: () => maxLoad,
-    numTokens: () => numTokens,
   };
+
+  // add read-only properties
+  Object.defineProperties(jobClient, {
+    maxJobs: { value: maxJobs, enumerable: true },
+    maxLoad: { value: maxLoad, enumerable: true },
+  });
 
   // test acquire + release
   let token = null;
