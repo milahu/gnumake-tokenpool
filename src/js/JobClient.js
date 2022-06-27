@@ -21,7 +21,7 @@ const fs = require('fs');
 
 
 const debug = process.env.DEBUG_JOBCLIENT
-  ? (msg) => console.log(`JobClient: ${msg}`)
+  ? (msg) => console.error(`JobClient: ${msg}`) // print to stderr
   : (_msg) => {};
 
 
