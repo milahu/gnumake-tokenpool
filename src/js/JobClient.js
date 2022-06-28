@@ -135,6 +135,7 @@ exports.JobClient = function JobClient() {
   // lr-x------ 1 1000 100 64 Jun 27 14:29 3 -> /proc/2370722/fd
   //
   // conditions for jobserver on:
+  // * maxJobs is undefined
   // * fds 3 and 4 are connected
   // * fd 3 is readable
   // * fd 4 is writable
