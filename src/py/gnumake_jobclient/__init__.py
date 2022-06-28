@@ -99,7 +99,7 @@ class JobClient:
     _debug("init: test ok")
 
   @property
-  def maxJobs(self) -> int:
+  def maxJobs(self) -> int or None:
     return self._maxJobs
 
   @property
