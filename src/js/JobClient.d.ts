@@ -6,6 +6,6 @@ export type JobClient = {
     acquire: () => number | null,
     release: (token: number) => boolean,
     // read-only properties
-    maxJobs: number,
+    maxJobs: number | undefined,
     maxLoad: number | undefined,
 };
