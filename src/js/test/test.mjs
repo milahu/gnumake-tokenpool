@@ -1,5 +1,5 @@
 //import { JobClient } from '@milahu/gnumake-jobclient';
-import { JobClient } from '../JobClient.js';
+import { JobClient } from '../jobclient.js';
 
 //import process from 'process';
 

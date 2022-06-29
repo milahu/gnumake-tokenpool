@@ -2,12 +2,12 @@
   "name": "@milahu/gnumake-jobclient",
   "version": "0.0.3",
   "description": "client for the gnu make jobserver",
-  "main": "./JobClient.js",
-  "types": "./JobClient.d.ts",
+  "main": "./jobclient.js",
+  "types": "./jobclient.d.ts",
   "exports": {
     ".": {
-      "default": "./JobClient.js",
-      "types": "./JobClient.d.ts"
+      "default": "./jobclient.js",
+      "types": "./jobclient.d.ts"
     },
     "./package.json": "./package.json"
   },
