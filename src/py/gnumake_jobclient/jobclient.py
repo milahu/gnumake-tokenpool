@@ -40,8 +40,9 @@ class JobClient:
   def __init__(self):
     makeFlags = os.environ.get("MAKEFLAGS")
     if not makeFlags:
+      _debug and _log(f"init failed: MAKEFLAGS is empty")
       raise NoJobServer()
-    _debug and _log(f"MAKEFLAGS: {repr(makeFlags)}")
+    _debug and _log(f"init: MAKEFLAGS: {makeFlags}")
 
     self._fdRead = None
     self._fdWrite = None
@@ -64,11 +65,11 @@ class JobClient:
       if m:
         self._maxLoad = int(m.group(1))
         continue
-    _debug and _log(f"_fdRead = {self._fdRead}, _fdWrite = {self._fdWrite}, " +
+    _debug and _log(f"init: fdRead = {self._fdRead}, fdWrite = {self._fdWrite}, " +
       f"maxJobs = {self._maxJobs}, maxLoad = {self._maxLoad}")
 
     if self._maxJobs == 1:
-      _debug and _log(f"maxJobs == 1 -> jobserver off")
+      _debug and _log(f"init failed: maxJobs == 1")
       raise NoJobServer()
     if self._fdRead == None:
       raise NoJobServer()
@@ -97,12 +98,12 @@ class JobClient:
     try:
       token = self.acquire()
     except OSError as e:
-      if e.errno == 9:
-        _debug and _log(f"read error -> jobserver off")
+      if e.errno == 9: # Bad file descriptor = pipe is closed
+        _debug and _log(f"init failed: read error: {e}")
         raise NoJobServer()
       raise e
     _debug and _log("init: test release")
-    self.release(token)
+    self.release(token) # TODO handle errors
     _debug and _log("init: test ok")
 
   @property
