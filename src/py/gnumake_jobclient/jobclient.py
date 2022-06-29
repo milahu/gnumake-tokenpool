@@ -1,8 +1,11 @@
 import os, re
+from datetime import datetime
 
 __version__ = '0.0.1'
 
-_debug = lambda *a, **k: print("JobClient:", *a, **k) if os.environ.get("DEBUG_JOBCLIENT") else lambda *a, **k: None
+_debug = bool(os.environ.get("DEBUG_JOBCLIENT"))
+
+_log = lambda *a, **k: print(f"jobclient.py {os.getpid()} {datetime.utcnow().strftime('%F %T.%f')[:-3]}:", *a, **k)
 
 def _validateToken(token: int) -> None:
   if type(token) != int or token < 0 or 255 < token:
@@ -38,7 +41,7 @@ class JobClient:
     makeFlags = os.environ.get("MAKEFLAGS")
     if not makeFlags:
       raise NoJobServer()
-    _debug(f"makeFlags = {repr(makeFlags)}")
+    _debug and _log(f"MAKEFLAGS: {repr(makeFlags)}")
 
     self._fdRead = None
     self._fdWrite = None
@@ -58,11 +61,11 @@ class JobClient:
       if m:
         self._maxLoad = int(m.group(1))
         continue
-    _debug(f"_fdRead = {self._fdRead}, _fdWrite = {self._fdWrite}, " +
+    _debug and _log(f"_fdRead = {self._fdRead}, _fdWrite = {self._fdWrite}, " +
       f"maxJobs = {self._maxJobs}, maxLoad = {self._maxLoad}")
 
     if self._maxJobs == 1:
-      _debug(f"maxJobs == 1 -> jobserver off")
+      _debug and _log(f"maxJobs == 1 -> jobserver off")
       raise NoJobServer()
     if self._fdRead == None:
       raise NoJobServer()
@@ -87,17 +90,17 @@ class JobClient:
     # * fds 3 and 4 are pipes
     # * fds 3 and 4 are pipes with the same ID (?)
 
-    _debug("init: test acquire")
+    _debug and _log("init: test acquire")
     try:
       token = self.acquire()
     except OSError as e:
       if e.errno == 9:
-        _debug(f"read error -> jobserver off")
+        _debug and _log(f"read error -> jobserver off")
         raise NoJobServer()
       raise e
-    _debug("init: test release")
+    _debug and _log("init: test release")
     self.release(token)
-    _debug("init: test ok")
+    _debug and _log("init: test ok")
 
   @property
   def maxJobs(self) -> int or None:
@@ -112,18 +115,18 @@ class JobClient:
       buffer = os.read(self._fdRead, 1)
     except BlockingIOError as e:
       if e.errno == 11: # Resource temporarily unavailable
-        _debug(f"acquire: token = None")
+        _debug and _log(f"acquire: token = None")
         return None # jobserver is full, try again later
       raise e
 
     assert len(buffer) == 1
     token = ord(buffer) # byte -> int8
-    _debug(f"acquire: token = {token}")
+    _debug and _log(f"acquire: token = {token}")
     return token
 
   def release(self, token: int) -> None:
     _validateToken(token)
-    _debug(f"release: token = {token}")
+    _debug and _log(f"release: token = {token}")
     buffer = token.to_bytes(1, byteorder='big') # int8 -> byte
     bytesWritten = os.write(self._fdWrite, buffer)
     assert bytesWritten == 1
