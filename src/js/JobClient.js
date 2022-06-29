@@ -96,6 +96,7 @@ exports.JobClient = function JobClient() {
   const jobClient = {
     acquire: () => {
       let bytesRead = 0;
+      debug && log(`acquire: read ...`);
       try {
         bytesRead = fs.readSync(fdRead, buffer);
       }
@@ -106,6 +107,7 @@ exports.JobClient = function JobClient() {
         }
         throw e;
       }
+      debug && log(`acquire: read done: ${bytesRead} bytes`);
       if (bytesRead != 1) throw new Error('read failed');
       const token = buffer.readInt8();
       debug && log(`acquire: token = ${token}`);
@@ -116,6 +118,7 @@ exports.JobClient = function JobClient() {
       validateToken(token);
       buffer.writeInt8(token);
       let bytesWritten = 0;
+      debug && log(`release: write ...`);
       try {
         bytesWritten = fs.writeSync(fdWrite, buffer);
       }
@@ -123,6 +126,7 @@ exports.JobClient = function JobClient() {
         //if (e.errno == -11) return false; // TODO errno?
         throw e;
       }
+      debug && log(`release: write done: ${bytesWritten} bytes`);
       if (bytesWritten != 1) throw new Error('write failed');
       return true; // success
     },
