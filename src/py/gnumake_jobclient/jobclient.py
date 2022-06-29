@@ -48,7 +48,10 @@ class JobClient:
     self._maxJobs = None
     self._maxLoad = None
     for flag in re.split(r"\s+", makeFlags):
-      m = re.fullmatch(r"--jobserver-auth=(\d+),(\d+)", flag)
+      m = (
+        re.fullmatch(r"--jobserver-auth=(\d+),(\d+)", flag) or
+        re.fullmatch(r"--jobserver-fds=(\d+),(\d+)", flag)
+      )
       if m:
         self._fdRead = int(m.group(1))
         self._fdWrite = int(m.group(2))
