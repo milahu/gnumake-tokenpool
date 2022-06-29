@@ -6,6 +6,7 @@ monorepo with implementations in multiple languages
 
 * [python](py/)
 * [javascript](js/)
+* [c++](cc/)
 
 ## similar projects
 
