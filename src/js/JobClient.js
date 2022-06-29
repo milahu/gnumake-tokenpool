@@ -72,16 +72,24 @@ exports.JobClient = function JobClient() {
   debug && log("init");
 
   const makeFlags = process.env.MAKEFLAGS;
-  debug && log(`makeFlags = ${makeFlags}`);
-  if (!makeFlags) return null;
+  if (!makeFlags) {
+    debug && log(`init failed: MAKEFLAGS is empty`);
+    return null;
+  }
+  debug && log(`MAKEFLAGS: ${makeFlags}`);
 
   const { fdRead, fdWrite, maxJobs, maxLoad } = parseFlags(makeFlags);
   debug && log(`fdRead = ${fdRead}, fdWrite = ${fdWrite}, maxJobs = ${maxJobs}, maxLoad = ${maxLoad}`);
-  if (maxJobs == 1) {
-    debug && log(`maxJobs == 1 -> jobserver off`);
+
+  if (fdRead == undefined) {
+    debug && log(`init failed: fds missing in MAKEFLAGS`);
     return null;
   }
-  if (fdRead == undefined) return null;
+
+  if (maxJobs == 1) {
+    debug && log(`init failed: maxJobs == 1`);
+    return null;
+  }
 
   const buffer = Buffer.alloc(1);
 
@@ -179,7 +187,7 @@ exports.JobClient = function JobClient() {
   }
   catch (e) {
     if (e.errno == -22) {
-      debug && log("init fail: jobserver off");
+      debug && log("init failed: jobserver off");
       return null; // jobserver off
     }
     throw e; // unexpected error
