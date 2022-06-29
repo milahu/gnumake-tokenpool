@@ -11,9 +11,9 @@ pip install git+https://github.com/milahu/gnumake-tokenpool
 ## usage
 
 ```py
-import gnumake_jobclient
+import gnumake_tokenpool
 
-jobClient = gnumake_jobclient.JobClient()
+jobClient = gnumake_tokenpool.JobClient()
 
 token = jobClient.acquire()
 
