@@ -1,9 +1,9 @@
 import sys
-import gnumake_jobclient
+import gnumake_tokenpool
 
 try:
-  jobClient = gnumake_jobclient.JobClient()
-except gnumake_jobclient.NoJobServer:
+  jobClient = gnumake_tokenpool.JobClient()
+except gnumake_tokenpool.NoJobServer:
   print(f"test: jobClient init failed")
   sys.exit(0)
 
