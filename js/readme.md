@@ -1,23 +1,17 @@
-# gnumake-jobclient-js
+# gnumake-tokenpool/js
 
-javascript client for the GNU make jobserver
+javascript jobclient and jobserver for the GNU make tokenpool protocol
 
 ## install
 
 ```
-npm install @milahu/gnumake-jobclient
-```
-
-or
-
-```
-npm install github:milahu/gnumake-jobclient-js
+npm install git+https://github.com/milahu/gnumake-tokenpool
 ```
 
 ## usage
 
 ```js
-import { JobClient } from '@milahu/gnumake-jobclient';
+import { JobClient } from '@milahu/gnumake-tokenpool';
 
 const jobClient = JobClient();
 
@@ -28,14 +22,4 @@ const token = jobClient.acquire();
 jobClient.release(token);
 ```
 
-see also [test/test.mjs](test/test.mjs)
-
-## similar projects
-
-* https://github.com/olsner/jobclient
-* https://github.com/milahu/gnumake-jobclient-py
-
-## related
-
-* [GNU make jobserver implementation](http://make.mad-scientist.net/papers/jobserver-implementation/)
-* [ninja with jobclient and jobserver](https://gitlab.kitware.com/cmake/cmake/-/issues/21597)
+see also [test/jobclient/test.mjs](test/jobclient/test.mjs)
