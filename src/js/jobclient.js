@@ -76,10 +76,10 @@ exports.JobClient = function JobClient() {
     debug && log(`init failed: MAKEFLAGS is empty`);
     return null;
   }
-  debug && log(`MAKEFLAGS: ${makeFlags}`);
+  debug && log(`init: MAKEFLAGS: ${makeFlags}`);
 
   const { fdRead, fdWrite, maxJobs, maxLoad } = parseFlags(makeFlags);
-  debug && log(`fdRead = ${fdRead}, fdWrite = ${fdWrite}, maxJobs = ${maxJobs}, maxLoad = ${maxLoad}`);
+  debug && log(`init: fdRead = ${fdRead}, fdWrite = ${fdWrite}, maxJobs = ${maxJobs}, maxLoad = ${maxLoad}`);
 
   if (fdRead == undefined) {
     debug && log(`init failed: fds missing in MAKEFLAGS`);
@@ -180,6 +180,7 @@ exports.JobClient = function JobClient() {
     throw Exception("check must be r or w");
   }
 
+  debug && log(`init: test fdRead`);
   const statsRead = fs.fstatSync(fdRead);
   if (!statsRead.isFIFO()) {
     debug && log(`init failed: fd ${fdRead} is no pipe`);
@@ -190,6 +191,7 @@ exports.JobClient = function JobClient() {
     return null;
   }
 
+  debug && log(`init: test fdWrite`);
   const statsWrite = fs.fstatSync(fdWrite);
   if (!statsWrite.isFIFO()) {
     debug && log(`init failed: fd ${fdWrite} is no pipe`);
@@ -200,6 +202,7 @@ exports.JobClient = function JobClient() {
     return null;
   }
 
+  debug && log(`init: test acquire`);
   // test acquire + release
   let token = null;
   try {
@@ -216,10 +219,11 @@ exports.JobClient = function JobClient() {
     }
     throw e; // unexpected error
   }
+  debug && log(`init: test release`);
   if (jobClient.release(token) == false) {
     // TODO?
     //return null;
-    throw new Error('release failed');
+    throw new Error('init failed: release failed');
   }
   debug && log("init ok");
   return jobClient; // ok
