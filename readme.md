@@ -4,6 +4,9 @@ jobclient and jobserver for the GNU make tokenpool protocol
 
 monorepo with implementations in multiple languages
 
+* [python](py/)
+* [javascript](js/)
+
 ## similar projects
 
 * https://github.com/olsner/jobclient
