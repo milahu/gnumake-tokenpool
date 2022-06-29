@@ -1,4 +1,4 @@
-declare module '@milahu/gnumake-jobclient';
+declare module '@milahu/gnumake-tokenpool';
 
 export function JobClient(): JobClient | null;
 

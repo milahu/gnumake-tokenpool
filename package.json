@@ -1,21 +1,22 @@
 {
-  "name": "@milahu/gnumake-jobclient",
-  "version": "0.0.3",
-  "description": "client for the gnu make jobserver",
-  "main": "./src/js/jobclient.js",
-  "types": "./src/js/jobclient.d.ts",
+  "name": "@milahu/gnumake-tokenpool",
+  "version": "0.0.4",
+  "description": "gnu make jobclient and jobserver",
+  "main": "js/src/tokenpool.js",
+  "types": "js/src/tokenpool.d.ts",
   "exports": {
     ".": {
-      "default": "./js/src/jobclient.js",
-      "types": "./js/src/jobclient.d.ts"
+      "default": "./js/src/tokenpool.js",
+      "types": "./js/src/tokenpool.d.ts"
     },
     "./package.json": "./package.json"
   },
+  "files": ["js/"],
   "scripts": {
     "test": "./js/test/test.sh"
   },
-  "keywords": ["gnu", "make", "gnumake", "jobclient", "jobserver"],
+  "keywords": ["gnu", "make", "gnumake", "tokenpool", "jobqueue", "jobclient", "jobserver"],
   "author": "milahu",
   "license": "MIT",
-  "homepage": "https://github.com/milahu/gnumake-jobclient-js"
+  "homepage": "https://github.com/milahu/gnumake-tokenpool"
 }
