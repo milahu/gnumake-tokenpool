@@ -2,7 +2,7 @@
 
 d="$(dirname "$(readlink -f "$0")")"
 
-export PYTHONPATH="$PYTHONPATH:$d/.."
+export PYTHONPATH="$PYTHONPATH:$d/../.."
 echo "PYTHONPATH = $PYTHONPATH"
 export DEBUG_JOBCLIENT=1
 set -e
