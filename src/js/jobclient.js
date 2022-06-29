@@ -32,11 +32,10 @@ function parseFlags(makeFlags) {
 
   for (const flag of makeFlags.split(/\s+/)) {
     let match;
-    if (match = flag.match(/^--jobserver-fds=(\d+),(\d+)$/)) {
-      fdRead = parseInt(match[1]);
-      fdWrite = parseInt(match[2]);
-    }
-    else if (match = flag.match(/^--jobserver-auth=(\d+),(\d+)$/)) {
+    if (
+      (match = flag.match(/^--jobserver-auth=(\d+),(\d+)$/)) ||
+      (match = flag.match(/^--jobserver-fds=(\d+),(\d+)$/))
+    ) {
       fdRead = parseInt(match[1]);
       fdWrite = parseInt(match[2]);
     }
