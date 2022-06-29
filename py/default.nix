@@ -9,23 +9,28 @@ nix-build -E 'with import <nixpkgs> { }; callPackage ./default.nix { }'
 }:
 
 python3Packages.buildPythonPackage rec {
-  pname = "gnumake-jobclient";
+  pname = "gnumake-tokenpool";
   version = "0.0.1";
-  src = ./.;
+  src = ../.;
   /*
   src = fetchFromGitHub {
     owner = "milahu";
-    repo = "gnumake-jobclient-py";
-    rev = "6f9b2243a602c09cb7a9d5486ff719a08b753cb9";
-    sha256 = "w3xsciGJKEUiDRbTB2ypCZbth/z4/rtGvaX2PN7andI=";
+    repo = "gnumake-tokenpool";
+    rev = "";
+    sha256 = "";
   };
   */
+  /*
   checkInputs = [
     gnumake
   ];
+  */
+  pythonImportsCheck = [
+    "gnumake_tokenpool"
+  ];
   meta = with lib; {
-    homepage = "https://github.com/milahu/gnumake-jobclient-py";
-    description = "client for the GNU make jobserver";
+    homepage = "https://github.com/milahu/gnumake-tokenpool";
+    description = "jobclient and jobserver for the GNU make tokenpool protocol";
     #maintainers = [];
     license = licenses.mit;
   };
