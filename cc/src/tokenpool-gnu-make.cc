@@ -81,6 +81,12 @@ bool GNUmakeTokenPool::SetupMaster(bool verbose,
   string auth;
   if (CreatePool(parallelism, &auth)) {
     string value = "--jobserver-auth=" + auth;
+    {
+      char buffer[32];
+      snprintf(buffer, sizeof(buffer), "%i", parallelism);
+      value += " -j";
+      value += buffer;
+    }
     if (max_load_average > 0.0f) {
       char buffer[32];
       snprintf(buffer, sizeof(buffer), "%g", max_load_average);
