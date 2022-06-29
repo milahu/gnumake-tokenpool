@@ -1,4 +1,4 @@
-import os, re
+import os, stat, re
 from datetime import datetime
 
 __version__ = '0.0.1'
@@ -93,6 +93,68 @@ class JobClient:
     # * fd 4 is writable
     # * fds 3 and 4 are pipes
     # * fds 3 and 4 are pipes with the same ID (?)
+
+    def check_access(s, check="r"):
+      #import stat
+      #s = os.stat(path)
+      u = os.geteuid()
+      g = os.getegid()
+      m = s.st_mode
+      if check == "r":
+        return (
+          ((s[stat.ST_UID] == u) and (m & stat.S_IRUSR)) or
+          ((s[stat.ST_GID] == g) and (m & stat.S_IRGRP)) or
+          (m & stat.S_IROTH)
+        )
+      if check == "w":
+        return (
+          ((s[stat.ST_UID] == u) and (m & stat.S_IWUSR)) or
+          ((s[stat.ST_GID] == g) and (m & stat.S_IWGRP)) or
+          (m & stat.S_IWOTH)
+        )
+      raise ValueError("check must be r or w")
+
+    def is_pipe(s):
+      if not stat.S_ISFIFO(s.st_mode):
+        return False
+      return True
+
+    def get_stat(fd):
+      try:
+        return os.stat(self._fdRead)
+      except OSError as e:
+        if e.errno == 9: # Bad file descriptor = pipe is closed
+          _debug and _log(f"init failed: fd {self._fdRead} stat failed: {e}")
+          raise NoJobServer()
+        raise e # unexpected error
+
+    # note: dont close the fds -> dont use open()
+
+    _debug and _log("init: test fdRead stat")
+    statsRead = get_stat(self._fdRead)
+
+    _debug and _log("init: test fdRead pipe")
+    if not is_pipe(statsRead):
+      _debug and _log(f"init failed: fd {self._fdRead} is no pipe")
+      raise NoJobServer()
+
+    _debug and _log("init: test fdRead readable")
+    if not check_access(statsRead, "r"):
+      _debug and _log(f"init failed: fd {self._fdRead} is not readable")
+      raise NoJobServer()
+
+    _debug and _log("init: test fdWrite stat")
+    statsWrite = get_stat(self._fdWrite)
+
+    _debug and _log("init: test fdWrite pipe")
+    if not is_pipe(statsWrite):
+      _debug and _log(f"init failed: fd {self._fdWrite} is no pipe")
+      raise NoJobServer()
+
+    _debug and _log("init: test fdWrite writable")
+    if not check_access(statsWrite, "w"):
+      _debug and _log(f"init failed: fd {self._fdWrite} is not writable")
+      raise NoJobServer()
 
     _debug and _log("init: test acquire")
     try:
