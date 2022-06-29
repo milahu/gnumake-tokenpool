@@ -2,11 +2,9 @@
 
 d="$(dirname "$(readlink -f "$0")")"
 
-export PYTHONPATH="$PYTHONPATH:$d/../.."
-echo "PYTHONPATH = $PYTHONPATH"
 export DEBUG_JOBCLIENT=1
 set -e
-cd "$(dirname "$0")"
+cd "$d"
 set -x
 
 make -j1 # 0 workers -> no jobserver
