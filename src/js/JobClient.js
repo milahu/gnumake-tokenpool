@@ -99,7 +99,7 @@ exports.JobClient = function JobClient() {
       debug && log(`acquire: token = ${token}`);
       return token;
     },
-    release: (token) => {
+    release: (token=43) => { // default token: str(+) == int(43)
       debug && log(`release: token = ${token}`);
       validateToken(token);
       buffer.writeInt8(token);
