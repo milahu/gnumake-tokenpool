@@ -139,12 +139,34 @@ exports.JobClient = function JobClient() {
   // lr-x------ 1 1000 100 64 Jun 27 14:29 3 -> /proc/2370722/fd
   //
   // conditions for jobserver on:
-  // * maxJobs is undefined
+  // * maxJobs is undefined // no. this is a bug in ninja-tokenpool. gnumake always sets -j in MAKEFLAGS
   // * fds 3 and 4 are connected
   // * fd 3 is readable
   // * fd 4 is writable
   // * fds 3 and 4 are pipes
   // * fds 3 and 4 are pipes with the same ID (?)
+
+  // TODO windows: named semaphore
+
+  const statsRead = fs.fstatSync(fdRead);
+  if (!statsRead.isFIFO()) {
+    debug && log(`init failed: fd ${fdRead} is no pipe`);
+    return null;
+  }
+  if(statsRead.mode & fs.S_IRUSR == 0) {
+    debug && log(`init failed: fd ${fdRead} is not readable`);
+    return null;
+  }
+
+  const statsWrite = fs.fstatSync(fdWrite);
+  if (!statsWrite.isFIFO()) {
+    debug && log(`init failed: fd ${fdWrite} is no pipe`);
+    return null;
+  }
+  if(statsWrite.mode & fs.S_IWUSR == 0) {
+    debug && log(`init failed: fd ${fdWrite} is not writable`);
+    return null;
+  }
 
   // test acquire + release
   let token = null;
