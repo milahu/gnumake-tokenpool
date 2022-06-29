@@ -22,7 +22,7 @@ const fs = require('fs');
 
 const debug = Boolean(process.env.DEBUG_JOBCLIENT);
 
-const log = (msg) => console.error(`JobClient[${process.pid}][${new Date().toLocaleString('af')}.${String(Date.now() % 1000).padStart(3, '0')}]: ${msg}`); // print to stderr
+const log = (msg) => console.error(`jobclient.js ${process.pid} ${new Date().toLocaleString('af')}.${String(Date.now() % 1000).padStart(3, '0')}: ${msg}`); // print to stderr
 
 
 
