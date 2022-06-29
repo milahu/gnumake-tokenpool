@@ -17,6 +17,7 @@
 
 const process = require('process');
 const fs = require('fs');
+const os = require('os');
 
 
 
@@ -159,12 +160,32 @@ exports.JobClient = function JobClient() {
 
   // TODO windows: named semaphore
 
+  function checkAccess(s, check="r") {
+    const { uid: u, gid: g } = os.userInfo();
+    const m = s.mode;
+    if (check == "r") {
+      return (
+        ((s.uid == u) && (m & fs.constants.S_IRUSR)) ||
+        ((s.gid == g) && (m & fs.constants.S_IRGRP)) ||
+        (m & fs.constants.S_IROTH)
+      ) != 0;
+    }
+    if (check == "w") {
+      return (
+        ((s.uid == u) && (m & fs.constants.S_IWUSR)) ||
+        ((s.gid == g) && (m & fs.constants.S_IWGRP)) ||
+        (m & fs.constants.S_IWOTH)
+      ) != 0;
+    }
+    throw Exception("check must be r or w");
+  }
+
   const statsRead = fs.fstatSync(fdRead);
   if (!statsRead.isFIFO()) {
     debug && log(`init failed: fd ${fdRead} is no pipe`);
     return null;
   }
-  if(statsRead.mode & fs.S_IRUSR == 0) {
+  if(!checkAccess(statsRead, 'r')) {
     debug && log(`init failed: fd ${fdRead} is not readable`);
     return null;
   }
@@ -174,7 +195,7 @@ exports.JobClient = function JobClient() {
     debug && log(`init failed: fd ${fdWrite} is no pipe`);
     return null;
   }
-  if(statsWrite.mode & fs.S_IWUSR == 0) {
+  if(!checkAccess(statsWrite, 'w')) {
     debug && log(`init failed: fd ${fdWrite} is not writable`);
     return null;
   }
