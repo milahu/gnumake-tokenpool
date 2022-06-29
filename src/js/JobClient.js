@@ -20,9 +20,9 @@ const fs = require('fs');
 
 
 
-const debug = process.env.DEBUG_JOBCLIENT
-  ? (msg) => console.error(`JobClient: ${msg}`) // print to stderr
-  : (_msg) => {};
+const debug = Boolean(process.env.DEBUG_JOBCLIENT);
+
+const log = (msg) => console.error(`JobClient: ${msg}`); // print to stderr
 
 
 
@@ -65,16 +65,16 @@ function validateToken(token) {
 // jobClient factory
 exports.JobClient = function JobClient() {
 
-  debug("init");
+  debug && log("init");
 
   const makeFlags = process.env.MAKEFLAGS;
-  debug(`makeFlags = ${makeFlags}`);
+  debug && log(`makeFlags = ${makeFlags}`);
   if (!makeFlags) return null;
 
   const { fdRead, fdWrite, maxJobs, maxLoad } = parseFlags(makeFlags);
-  debug(`fdRead = ${fdRead}, fdWrite = ${fdWrite}, maxJobs = ${maxJobs}, maxLoad = ${maxLoad}`);
+  debug && log(`fdRead = ${fdRead}, fdWrite = ${fdWrite}, maxJobs = ${maxJobs}, maxLoad = ${maxLoad}`);
   if (maxJobs == 1) {
-    debug(`maxJobs == 1 -> jobserver off`);
+    debug && log(`maxJobs == 1 -> jobserver off`);
     return null;
   }
   if (fdRead == undefined) return null;
@@ -89,18 +89,18 @@ exports.JobClient = function JobClient() {
       }
       catch (e) {
         if (e.errno == -11) {
-          debug(`acquire: token = null`);
+          debug && log(`acquire: token = null`);
           return null; // jobserver is full, try again later
         }
         throw e;
       }
       if (bytesRead != 1) throw new Error('read failed');
       const token = buffer.readInt8();
-      debug(`acquire: token = ${token}`);
+      debug && log(`acquire: token = ${token}`);
       return token;
     },
     release: (token) => {
-      debug(`release: token = ${token}`);
+      debug && log(`release: token = ${token}`);
       validateToken(token);
       buffer.writeInt8(token);
       let bytesWritten = 0;
@@ -147,13 +147,13 @@ exports.JobClient = function JobClient() {
   try {
     token = jobClient.acquire();
     if (token == null) {
-      debug("init ok: jobserver is full");
+      debug && log("init ok: jobserver is full");
       return jobClient; // ok
     }
   }
   catch (e) {
     if (e.errno == -22) {
-      debug("init fail: jobserver off");
+      debug && log("init fail: jobserver off");
       return null; // jobserver off
     }
     throw e; // unexpected error
@@ -163,6 +163,6 @@ exports.JobClient = function JobClient() {
     //return null;
     throw new Error('release failed');
   }
-  debug("init ok");
+  debug && log("init ok");
   return jobClient; // ok
 }
