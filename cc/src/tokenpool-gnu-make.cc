@@ -122,9 +122,10 @@ bool GNUmakeTokenPool::Acquire() {
   if (available_ > 0)
     return true;
 
-  if (AcquireToken()) {
+  int token;
+  if ((token = AcquireToken()) >= 0) {
     // token acquired
-    printf("GNUmakeTokenPool::Acquire: token acquired\n");
+    printf("GNUmakeTokenPool::Acquire: token acquired: %i\n", token);
     available_++;
     return true;
   }

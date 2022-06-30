@@ -38,8 +38,8 @@ struct GNUmakeTokenPoolPosix : public GNUmakeTokenPool {
   };
   virtual bool ParseAuth(const char* jobserver);
   virtual bool CreatePool(int parallelism, std::string* auth);
-  virtual bool AcquireToken();
-  virtual bool ReturnToken();
+  virtual int AcquireToken();
+  virtual bool ReturnToken(int token);
 
  private:
   int rfd_;
@@ -135,7 +135,7 @@ bool GNUmakeTokenPoolPosix::CreatePool(int parallelism, std::string* auth) {
   return true;
 }
 
-bool GNUmakeTokenPoolPosix::AcquireToken() {
+int GNUmakeTokenPoolPosix::AcquireToken() {
   //printf("GNUmakeTokenPoolPosix::AcquireToken: rfd_ = %i\n", rfd_);
   // Please read
   //
@@ -174,6 +174,7 @@ bool GNUmakeTokenPoolPosix::AcquireToken() {
       // Temporarily replace SIGCHLD handler with our own
       memset(&act, 0, sizeof(act));
       act.sa_handler = CloseDupRfd;
+      char buf;
       if (sigaction(SIGCHLD, &act, &old_act) == 0) {
         struct itimerval timeout;
 
@@ -181,8 +182,6 @@ bool GNUmakeTokenPoolPosix::AcquireToken() {
         memset(&timeout, 0, sizeof(timeout));
         timeout.it_value.tv_usec = 100 * 1000; // [ms] -> [usec]
         if (setitimer(ITIMER_REAL, &timeout, NULL) == 0) {
-          char buf;
-
           // Now try to read() from dup_rfd_. Return values from read():
           //
           // 1. token read                               ->  1
@@ -206,18 +205,21 @@ bool GNUmakeTokenPoolPosix::AcquireToken() {
 
       // Case 1 from above list
       if (ret > 0)
-        return true;
+        return (int) buf; // 0 <= token <= 255
     }
   }
 
   // read() would block, i.e. no token available,
   // cases 2-6 from above list or
   // select() / poll() / dup() / sigaction() / setitimer() failed
-  return false;
+  return -1; // error: no token
 }
 
-bool GNUmakeTokenPoolPosix::ReturnToken() {
-  const char buf = '+';
+bool GNUmakeTokenPoolPosix::ReturnToken(int token = 43) {
+  // default token is char + == int 43
+  //const char buf = '+';
+  const char buf = (const char) token;
+  printf("GNUmakeTokenPoolPosix::ReturnToken: token = int %i = char %c\n", token, buf);
   while (1) {
     int ret = write(wfd_, &buf, 1);
     if (ret > 0)

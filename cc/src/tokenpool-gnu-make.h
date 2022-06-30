@@ -37,8 +37,8 @@ struct GNUmakeTokenPool : public TokenPool {
   virtual bool SetEnv(const char* name, const char* value) = 0;
   virtual bool ParseAuth(const char* jobserver) = 0;
   virtual bool CreatePool(int parallelism, std::string* auth) = 0;
-  virtual bool AcquireToken() = 0;
-  virtual bool ReturnToken() = 0;
+  virtual int AcquireToken() = 0;
+  virtual bool ReturnToken(int token = 43) = 0;
 
  private:
   int available_;
