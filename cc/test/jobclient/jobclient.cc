@@ -85,5 +85,9 @@ int main() {
   }
   printf("released all tokens\n");
 
+  // cleanup
+  delete tokenpool_;
+  tokenpool_ = NULL;
+
   return 0;
 }
