@@ -25,6 +25,10 @@ struct TokenPool {
   virtual void Release() = 0;
   virtual void Clear() = 0;
 
+  // platform specific implementation
+  virtual int AcquireToken() = 0;
+  virtual bool ReleaseToken(int token = 43) = 0;
+
   // returns false if token pool setup failed
   virtual bool SetupClient(bool ignore, bool verbose,
                            double& max_load_average) = 0;
