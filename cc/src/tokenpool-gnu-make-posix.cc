@@ -99,8 +99,10 @@ bool GNUmakeTokenPoolPosix::ParseAuth(const char* jobserver) {
       SetAlarmHandler()) {
     rfd_ = rfd;
     wfd_ = wfd;
+    printf("GNUmakeTokenPoolPosix::ParseAuth: parsed fds %i, %i\n", rfd_, wfd_);
     return true;
   }
+  printf("GNUmakeTokenPoolPosix::ParseAuth: failed to parse fds from jobserver arg: %s\n", jobserver);
 
   return false;
 }
@@ -134,6 +136,7 @@ bool GNUmakeTokenPoolPosix::CreatePool(int parallelism, std::string* auth) {
 }
 
 bool GNUmakeTokenPoolPosix::AcquireToken() {
+  //printf("GNUmakeTokenPoolPosix::AcquireToken: rfd_ = %i\n", rfd_);
   // Please read
   //
   //   http://make.mad-scientist.net/papers/jobserver-implementation/
@@ -144,9 +147,11 @@ bool GNUmakeTokenPoolPosix::AcquireToken() {
   //
   // First check if read() would succeed without blocking.
 #ifdef USE_PPOLL
+  //printf("GNUmakeTokenPoolPosix::AcquireToken USE_PPOLL=1\n");
   pollfd pollfds[] = {{rfd_, POLLIN, 0}};
   int ret = poll(pollfds, 1, 0);
 #else
+  //printf("GNUmakeTokenPoolPosix::AcquireToken USE_PPOLL=0\n");
   fd_set set;
   struct timeval timeout = { 0, 0 };
   FD_ZERO(&set);

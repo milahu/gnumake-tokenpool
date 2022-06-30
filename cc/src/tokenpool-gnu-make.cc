@@ -18,7 +18,14 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "line_printer.h"
+#define DEBUG(S) printf(S); // TODO varargs
+
+#if 0
+#include "line_printer.h" // ninja.cc
+#define PRINT(S) { LinePrinter printer; printer.PrintOnNewLine(S); }
+#else
+#define PRINT(S) printf(S);
+#endif
 
 using namespace std;
 
@@ -34,8 +41,10 @@ bool GNUmakeTokenPool::SetupClient(bool ignore,
                                    bool verbose,
                                    double& max_load_average) {
   const char* value = GetEnv("MAKEFLAGS");
-  if (!value)
+  if (!value) {
+    DEBUG("GNUmakeTokenPool::SetupClient: init failed. MAKEFLAGS is empty\n");
     return false;
+  }
 
   // GNU make <= 4.1
   const char* jobserver = strstr(value, "--jobserver-fds=");
@@ -43,17 +52,19 @@ bool GNUmakeTokenPool::SetupClient(bool ignore,
     // GNU make => 4.2
     jobserver = strstr(value, "--jobserver-auth=");
   if (jobserver) {
-    LinePrinter printer;
+    //LinePrinter printer;
+
+    DEBUG("GNUmakeTokenPool::SetupClient: found --jobserver-fds or --jobserver-auth in MAKEFLAGS\n");
 
     if (ignore) {
-      printer.PrintOnNewLine("ninja: warning: -jN forced on command line; ignoring GNU make jobserver.\n");
+      PRINT("ninja: warning: -jN forced on command line; ignoring GNU make jobserver.\n");
     } else {
       if (ParseAuth(jobserver)) {
         const char* l_arg = strstr(value, " -l");
         int load_limit = -1;
 
         if (verbose) {
-          printer.PrintOnNewLine("ninja: using GNU make jobserver.\n");
+          PRINT("ninja: using GNU make jobserver.\n");
         }
 
         // translate GNU make -lN to ninja -lN
@@ -96,8 +107,8 @@ bool GNUmakeTokenPool::SetupMaster(bool verbose,
 
     if (SetEnv("MAKEFLAGS", value.c_str())) {
       if (verbose) {
-        LinePrinter printer;
-        printer.PrintOnNewLine("ninja: simulating GNU make jobserver.\n");
+        //LinePrinter printer;
+        PRINT("ninja: simulating GNU make jobserver.\n");
       }
       return true;
     }
@@ -107,15 +118,18 @@ bool GNUmakeTokenPool::SetupMaster(bool verbose,
 }
 
 bool GNUmakeTokenPool::Acquire() {
+  printf("GNUmakeTokenPool::Acquire: available_ = %i\n", available_);
   if (available_ > 0)
     return true;
 
   if (AcquireToken()) {
     // token acquired
+    printf("GNUmakeTokenPool::Acquire: token acquired\n");
     available_++;
     return true;
   }
 
+  printf("GNUmakeTokenPool::Acquire: no token available\n");
   // no token available
   return false;
 }
