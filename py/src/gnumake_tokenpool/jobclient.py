@@ -167,7 +167,7 @@ class JobClient:
         raise NoJobServer()
       raise e
     if token == None:
-      _debug and _log("init: test acquire failed. got no token")
+      _debug and _log("init: test acquire failed. jobserver is full")
     else:
       _debug and _log("init: test acquire ok")
       _debug and _log("init: test release ...")
@@ -189,11 +189,17 @@ class JobClient:
     #buffer = os.read(self._fdRead, 1)
     # os.read blocks when fdRead is empty
 
+    #os.close(self._fdRead) # test: read error: [Errno 9] Bad file descriptor
+    #os.read(self._fdRead, 999) # test: fd is empty
+
     # is self._fdRead readable?
-    r, _w, _e = select.select([self._fdRead], [], [], 0)
-    if not self._fdRead in r:
-      _debug and _log(f"acquire: fail: fd is not ready for reading")
+    # timeout 0 -> non-blocking
+    rlist, _wlist, _xlist = select.select([self._fdRead], [], [], 0)
+    if len(rlist) == 0:
+      _debug and _log(f"acquire failed: fd is empty")
       return None
+
+    #os.read(self._fdRead, 999) # test race condition: fd is empty 2
 
     # Handle potential race condition:
     #  - the above check succeeded, i.e. read() should not block
@@ -218,6 +224,7 @@ class JobClient:
       _debug and _log(f"acquire: read timeout")
       fdReadDupClose()
 
+    # TODO remove SIGCHLD handler. too high-level. dont manage worker procs here.
     # 1. install a signal handler for SIGCHLD.
     # This signal handler will close the duplicate file descriptor self._fdReadDup.
     # SIGCHLD = one of our currently running jobs completed
@@ -233,6 +240,8 @@ class JobClient:
     # This will allow the blocking read to be interrupted if a child process dies.
     signal.siginterrupt(signal.SIGCHLD, False) # Set SA_RESTART to limit EINTR occurrences.
 
+    # TODO remove SIGALRM handler + signal.setitimer? not needed?
+    # or keep it, to make sure we dont block?
     # same for signal SIGALRM
     # SIGALRM = timer has fired = read timeout
     old_sigalrm_handler = signal.signal(signal.SIGALRM, read_timeout_handler)
@@ -251,11 +260,11 @@ class JobClient:
       #time.sleep(100); buffer = b"" # test. note: this is not killed by fdReadDupClose
     except BlockingIOError as e:
       if e.errno == 11: # Resource temporarily unavailable
-        _debug and _log(f"acquire: read failed: {e}")
+        _debug and _log(f"acquire failed: fd is empty 2")
         return None # jobserver is full, try again later
       raise e # unexpected error
     except OSError as e:
-      if e.errno == 9: # EBADF: Bad file descriptor
+      if e.errno == 9: # EBADF: Bad file descriptor = pipe is closed
         # self._fdReadDup was closed by fdReadDupClose
         _debug and _log(f"acquire: read failed: {e}")
         return None # jobserver is full, try again later
