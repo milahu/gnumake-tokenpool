@@ -1,11 +1,11 @@
-import os, stat, re
+import os, stat, select, signal, time, re
 from datetime import datetime
 
 __version__ = '0.0.1'
 
 _debug = bool(os.environ.get("DEBUG_JOBCLIENT"))
 
-_log = lambda *a, **k: print(f"jobclient.py {os.getpid()} {datetime.utcnow().strftime('%F %T.%f')[:-3]}:", *a, **k)
+_log = lambda *a, **k: print(f"jobclient.py {os.getpid()} {datetime.utcnow().strftime('%F %T.%f')}:", *a, **k)
 
 def _validateToken(token: int) -> None:
   if type(token) != int or token < 0 or 255 < token:
@@ -45,6 +45,7 @@ class JobClient:
     _debug and _log(f"init: MAKEFLAGS: {makeFlags}")
 
     self._fdRead = None
+    self._fdReadDup = None
     self._fdWrite = None
     self._maxJobs = None
     self._maxLoad = None
@@ -177,22 +178,110 @@ class JobClient:
     return self._maxLoad
 
   def acquire(self) -> int or None:
+    # TODO? add timestamp to token so we can track it
+    # http://make.mad-scientist.net/papers/jobserver-implementation/
+    #buffer = os.read(self._fdRead, 1)
+    # os.read blocks when fdRead is empty
+
+    # is self._fdRead readable?
+    r, _w, _e = select.select([self._fdRead], [], [], 0)
+    if not self._fdRead in r:
+      return None
+
+    # Handle potential race condition:
+    #  - the above check succeeded, i.e. read() should not block
+    #  - the character disappears before we call read()
+    #
+    # Create a duplicate of rfd_. The duplicate file descriptor dup_rfd_
+    # can safely be closed by signal handlers without affecting rfd_.
+
+    # 4.1. We use dup to create a duplicate of the read side of the jobserver pipe.
+    # Note that we might already have a duplicate file descriptor
+    # from a previous run: if so we don’t re-dup it.
+    if not self._fdReadDup:
+      self._fdReadDup = os.dup(self._fdRead)
+
+    if not self._fdReadDup:
+      return None
+
+    fdReadDupClose = lambda: os.close(self._fdReadDup)
+
+    def read_timeout_handler(_signum, _frame):
+      _debug and _log(f"acquire: read timeout")
+      fdReadDupClose()
+
+    # 1. install a signal handler for SIGCHLD.
+    # This signal handler will close the duplicate file descriptor self._fdReadDup.
+    # SIGCHLD = one of our currently running jobs completed
+    old_sigchld_handler = signal.signal(signal.SIGCHLD, read_timeout_handler)
+
+    # 2. set the SA_RESTART flag on this signal handler
+    # https://peps.python.org/pep-0475/
+    # Python’s signal.signal() function clears the SA_RESTART flag
+    # when setting the signal handler:
+    # all system calls will probably fail with EINTR in Python.
+    # https://stackoverflow.com/questions/5844364/linux-blocking-signals-to-python-init
+    # 4.4. we disable SA_RESTART on the SIGCHLD signal.
+    # This will allow the blocking read to be interrupted if a child process dies.
+    signal.siginterrupt(signal.SIGCHLD, False) # Set SA_RESTART to limit EINTR occurrences.
+
+    # same for signal SIGALRM
+    # SIGALRM = timer has fired = read timeout
+    old_sigalrm_handler = signal.signal(signal.SIGALRM, read_timeout_handler)
+    signal.siginterrupt(signal.SIGALRM, False) # Set SA_RESTART to limit EINTR occurrences.
+
+    read_timeout = 0.1
+    #read_timeout = 0.5 # debug
+    signal.setitimer(signal.ITIMER_REAL, read_timeout) # set timer for SIGALRM. unix only
+
+    # 4.5. perform a blocking read of one byte
+    # on the duplicate jobserver file descriptor
+    _debug and _log(f"acquire: read with timeout {read_timeout} ...")
+    buffer = b""
     try:
-      buffer = os.read(self._fdRead, 1)
+      buffer = os.read(self._fdReadDup, 1)
+      #time.sleep(100); buffer = b"" # test. note: this is not killed by fdReadDupClose
     except BlockingIOError as e:
       if e.errno == 11: # Resource temporarily unavailable
-        _debug and _log(f"acquire: token = None")
+        _debug and _log(f"acquire: read failed: {e}")
         return None # jobserver is full, try again later
-      raise e
+      raise e # unexpected error
+    except OSError as e:
+      if e.errno == 9: # EBADF: Bad file descriptor
+        # self._fdReadDup was closed by fdReadDupClose
+        _debug and _log(f"acquire: read failed: {e}")
+        return None # jobserver is full, try again later
+      raise e # unexpected error
 
+    #fdReadDupClose() # keep self._fdReadDup for next call to acquire
+
+    signal.setitimer(signal.ITIMER_REAL, 0) # clear timer. unix only
+
+    # clear signal handlers
+    signal.signal(signal.SIGCHLD, old_sigchld_handler)
+    signal.signal(signal.SIGALRM, old_sigalrm_handler)
+
+    #if len(buffer) == 0:
+    #  return None
     assert len(buffer) == 1
     token = ord(buffer) # byte -> int8
-    _debug and _log(f"acquire: token = {token}")
+    _debug and _log(f"acquire: read ok. token = {token}")
     return token
 
   def release(self, token: int) -> None:
     _validateToken(token)
-    _debug and _log(f"release: token = {token}")
     buffer = token.to_bytes(1, byteorder='big') # int8 -> byte
-    bytesWritten = os.write(self._fdWrite, buffer)
-    assert bytesWritten == 1
+    while True:
+      _debug and _log(f"release: write token {token} ...")
+      try:
+        bytesWritten = os.write(self._fdWrite, buffer)
+        assert bytesWritten == 1
+        _debug and _log(f"release: write ok")
+        return
+      except (OSError, select.error) as e:
+        # handle EINTR = interrupt
+        # FIXME be more specific?
+        # https://stackoverflow.com/questions/15474072/how-to-catch-eintr-in-python
+        write_retry = 0.1
+        _debug and _log(f"release: write failed: {e} -> retry after {write_retry} seconds")
+        time.sleep(write_retry) # throttle retry
