@@ -21,25 +21,25 @@ int main() {
   bool ignore_jobserver = false;
   double load_avg_ = 0.0;
 
-  TokenPool* tokens_;
+  TokenPool* tokenpool_;
 
-  if ((tokens_ = TokenPool::Get()) == NULL) {
+  if ((tokenpool_ = TokenPool::Get()) == NULL) {
     printf("TokenPool::Get failed\n");
     return 1;
   }
   printf("TokenPool::Get ok\n");
 
-  if (!tokens_->SetupClient(
+  if (!tokenpool_->SetupClient(
     ignore_jobserver,
     true, // verbose
     load_avg_
   )) {
-    delete tokens_;
-    tokens_ = NULL;
-    printf("tokens_->SetupClient failed. jobserver off? run make like 'make -j4'\n");
+    delete tokenpool_;
+    tokenpool_ = NULL;
+    printf("tokenpool_->SetupClient failed. jobserver off? run make like 'make -j4'\n");
     return 1;
   }
-  printf("tokens_->SetupClient ok\n");
+  printf("tokenpool_->SetupClient ok\n");
 
   int token_id;
 
@@ -47,20 +47,20 @@ int main() {
   // with 'make -j10' this acquires 10 tokens
   printf("high-level interface\n");
   for (token_id = 0; token_id < 10; token_id++) {
-    if (!tokens_->Acquire()) {
-      printf("token %i: tokens_->Acquire failed\n", token_id);
+    if (!tokenpool_->Acquire()) {
+      printf("token %i: tokenpool_->Acquire failed\n", token_id);
       break;
     }
-    tokens_->Reserve();
-    printf("token %i: tokens_->Acquire ok\n", token_id);
+    tokenpool_->Reserve();
+    printf("token %i: tokenpool_->Acquire ok\n", token_id);
   }
   printf("acquired %i tokens\n", token_id);
 
-  // release all tokens. same as: tokens_->Clear();
+  // release all tokens. same as: tokenpool_->Clear();
   printf("releasing %i tokens\n", token_id);
   for (; token_id > 0; token_id--) {
-    printf("token %i: tokens_->Release\n", token_id);
-    tokens_->Release();
+    printf("token %i: tokenpool_->Release\n", token_id);
+    tokenpool_->Release();
   }
 
   // low-level interface: AcquireToken, ReleaseToken
@@ -69,21 +69,21 @@ int main() {
   int token;
   std::vector<int> tokenVec;
   for (token_id = 0; token_id < 10; token_id++) {
-    if ((token = tokens_->AcquireToken()) < 0) {
-      printf("token %i: tokens_->AcquireToken failed\n", token_id);
+    if ((token = tokenpool_->AcquireToken()) < 0) {
+      printf("token %i: tokenpool_->AcquireToken failed\n", token_id);
       break;
     }
-    printf("token %i: tokens_->AcquireToken ok: token = %i\n", token_id, token);
+    printf("token %i: tokenpool_->AcquireToken ok: token = %i\n", token_id, token);
     tokenVec.push_back(token);
   }
   printf("acquired %i tokens\n", (int) tokenVec.size());
 
-  // release all tokens. same as: tokens_->Clear();
+  // release all tokens. same as: tokenpool_->Clear();
   printf("releasing %i tokens\n", (int) tokenVec.size());
   while (tokenVec.size() > 0) {
     token = tokenVec.back();
-    printf("tokens_->ReleaseToken %i\n", token);
-    tokens_->ReleaseToken(token);
+    printf("tokenpool_->ReleaseToken %i\n", token);
+    tokenpool_->ReleaseToken(token);
     tokenVec.pop_back();
   }
   printf("released all tokens\n");
