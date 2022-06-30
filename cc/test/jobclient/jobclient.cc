@@ -44,6 +44,7 @@ int main() {
   int token_id;
 
   // high-level interface: Acquire, Reserve, Release, Clear
+  // with 'make -j10' this acquires 10 tokens
   printf("high-level interface\n");
   for (token_id = 0; token_id < 10; token_id++) {
     if (!tokens_->Acquire()) {
@@ -63,6 +64,7 @@ int main() {
   }
 
   // low-level interface: AcquireToken, ReleaseToken
+  // with 'make -j10' this acquires 9 tokens
   printf("low-level interface\n");
   int token;
   std::vector<int> tokenVec;
