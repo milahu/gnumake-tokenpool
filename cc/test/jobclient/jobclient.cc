@@ -63,17 +63,20 @@ int main() {
   // low-level interface: AcquireToken, ReleaseToken
   // with 'make -j10' this acquires 9 tokens
   printf("low-level interface\n");
-  int token;
+  size_t worker_count = 1;
+  size_t job_count = 4; // == max_worker_count
   std::vector<int> tokens_;
-  for (token_id = 0; token_id < 10; token_id++) {
+  int token;
+  while (worker_count < job_count) {
     if ((token = tokenpool_->AcquireToken()) < 0) {
-      printf("token %i: tokenpool_->AcquireToken failed\n", token_id);
+      printf("token %i: tokenpool_->AcquireToken failed. jobserver is full\n", token_id);
       break;
     }
     printf("token %i: tokenpool_->AcquireToken ok: token = %i\n", token_id, token);
     tokens_.push_back(token);
+    worker_count++;
   }
-  printf("acquired %li tokens\n", tokens_.size());
+  printf("acquired %li tokens -> worker_count = %li\n", tokens_.size(), worker_count);
 
   // release all tokens. same as: tokenpool_->Clear();
   printf("releasing %li tokens\n", tokens_.size());

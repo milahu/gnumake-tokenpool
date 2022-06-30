@@ -11,4 +11,4 @@ set -x
 
 #make -j1 # no jobserver
 
-make -j4
+make -j10
