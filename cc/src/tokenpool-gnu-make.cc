@@ -141,7 +141,7 @@ void GNUmakeTokenPool::Reserve() {
 }
 
 void GNUmakeTokenPool::Return() {
-  if (ReturnToken())
+  if (ReleaseToken())
     available_--;
 }
 

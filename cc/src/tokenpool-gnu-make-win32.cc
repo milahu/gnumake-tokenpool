@@ -39,7 +39,7 @@ struct GNUmakeTokenPoolWin32 : public GNUmakeTokenPool {
   virtual bool ParseAuth(const char* jobserver);
   virtual bool CreatePool(int parallelism, std::string* auth);
   virtual bool AcquireToken();
-  virtual bool ReturnToken();
+  virtual bool ReleaseToken();
 
  private:
   // Semaphore for GNU make jobserver protocol
@@ -168,7 +168,7 @@ bool GNUmakeTokenPoolWin32::AcquireToken() {
   return WaitForSingleObject(semaphore_jobserver_, 0) == WAIT_OBJECT_0;
 }
 
-bool GNUmakeTokenPoolWin32::ReturnToken() {
+bool GNUmakeTokenPoolWin32::ReleaseToken() {
   ReleaseSemaphore(semaphore_jobserver_);
   return true;
 }

@@ -39,7 +39,7 @@ struct GNUmakeTokenPoolPosix : public GNUmakeTokenPool {
   virtual bool ParseAuth(const char* jobserver);
   virtual bool CreatePool(int parallelism, std::string* auth);
   virtual int AcquireToken();
-  virtual bool ReturnToken(int token);
+  virtual bool ReleaseToken(int token);
 
  private:
   int rfd_;
@@ -215,11 +215,11 @@ int GNUmakeTokenPoolPosix::AcquireToken() {
   return -1; // error: no token
 }
 
-bool GNUmakeTokenPoolPosix::ReturnToken(int token = 43) {
+bool GNUmakeTokenPoolPosix::ReleaseToken(int token = 43) {
   // default token is char + == int 43
   //const char buf = '+';
   const char buf = (const char) token;
-  printf("GNUmakeTokenPoolPosix::ReturnToken: token = int %i = char %c\n", token, buf);
+  printf("GNUmakeTokenPoolPosix::ReleaseToken: token = int %i = char %c\n", token, buf);
   while (1) {
     int ret = write(wfd_, &buf, 1);
     if (ret > 0)
