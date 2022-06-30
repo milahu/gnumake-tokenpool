@@ -157,7 +157,8 @@ class JobClient:
       _debug and _log(f"init failed: fd {self._fdWrite} is not writable")
       raise NoJobServer()
 
-    _debug and _log("init: test acquire")
+    _debug and _log("init: test acquire ...")
+    token = None
     try:
       token = self.acquire()
     except OSError as e:
@@ -165,8 +166,13 @@ class JobClient:
         _debug and _log(f"init failed: read error: {e}")
         raise NoJobServer()
       raise e
-    _debug and _log("init: test release")
-    self.release(token) # TODO handle errors
+    if token == None:
+      _debug and _log("init: test acquire failed. got no token")
+    else:
+      _debug and _log("init: test acquire ok")
+      _debug and _log("init: test release ...")
+      self.release(token) # TODO handle errors
+      _debug and _log("init: test release ok")
     _debug and _log("init: test ok")
 
   @property
@@ -186,6 +192,7 @@ class JobClient:
     # is self._fdRead readable?
     r, _w, _e = select.select([self._fdRead], [], [], 0)
     if not self._fdRead in r:
+      _debug and _log(f"acquire: fail: fd is not ready for reading")
       return None
 
     # Handle potential race condition:
@@ -202,6 +209,7 @@ class JobClient:
       self._fdReadDup = os.dup(self._fdRead)
 
     if not self._fdReadDup:
+      _debug and _log(f"acquire: failed to duplicate fd")
       return None
 
     fdReadDupClose = lambda: os.close(self._fdReadDup)
