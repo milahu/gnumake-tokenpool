@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <cassert> // assert
+#include <vector>
 
 int main() {
   printf("init\n");
@@ -41,6 +42,9 @@ int main() {
   printf("tokens_->SetupClient ok\n");
 
   int token_id;
+
+  // high-level interface: Acquire, Reserve, Release, Clear
+  printf("high-level interface\n");
   for (token_id = 0; token_id < 10; token_id++) {
     if (!tokens_->Acquire()) {
       printf("token %i: tokens_->Acquire failed\n", token_id);
@@ -57,6 +61,30 @@ int main() {
     printf("token %i: tokens_->Release\n", token_id);
     tokens_->Release();
   }
+
+  // low-level interface: AcquireToken, ReleaseToken
+  printf("low-level interface\n");
+  int token;
+  std::vector<int> tokenVec;
+  for (token_id = 0; token_id < 10; token_id++) {
+    if ((token = tokens_->AcquireToken()) < 0) {
+      printf("token %i: tokens_->AcquireToken failed\n", token_id);
+      break;
+    }
+    printf("token %i: tokens_->AcquireToken ok: token = %i\n", token_id, token);
+    tokenVec.push_back(token);
+  }
+  printf("acquired %i tokens\n", (int) tokenVec.size());
+
+  // release all tokens. same as: tokens_->Clear();
+  printf("releasing %i tokens\n", (int) tokenVec.size());
+  while (tokenVec.size() > 0) {
+    token = tokenVec.back();
+    printf("tokens_->ReleaseToken %i\n", token);
+    tokens_->ReleaseToken(token);
+    tokenVec.pop_back();
+  }
+  printf("released all tokens\n");
 
   return 0;
 }
