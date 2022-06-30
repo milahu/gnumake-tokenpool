@@ -32,10 +32,10 @@ struct GNUmakeTokenPoolPosix : public GNUmakeTokenPool {
 
   virtual int GetMonitorFd();
 
-  virtual const char* GetEnv(const char* name) { return getenv(name); };
+  virtual const char* GetEnv(const char* name) { return getenv(name); }
   virtual bool SetEnv(const char* name, const char* value) {
     return setenv(name, value, 1) == 0;
-  };
+  }
   virtual bool ParseAuth(const char* jobserver);
   virtual bool CreatePool(int parallelism, std::string* auth);
   virtual int AcquireToken();
@@ -218,7 +218,7 @@ int GNUmakeTokenPoolPosix::AcquireToken() {
 bool GNUmakeTokenPoolPosix::ReleaseToken(int token = 43) {
   // default token is char + == int 43
   //const char buf = '+';
-  const char buf = (const char) token;
+  char buf = (char) token;
   printf("GNUmakeTokenPoolPosix::ReleaseToken: token = int %i = char %c\n", token, buf);
   while (1) {
     int ret = write(wfd_, &buf, 1);
