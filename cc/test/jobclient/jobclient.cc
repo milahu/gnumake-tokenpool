@@ -73,10 +73,10 @@ int main() {
     printf("token %i: tokenpool_->AcquireToken ok: token = %i\n", token_id, token);
     tokens_.push_back(token);
   }
-  printf("acquired %i tokens\n", (int) tokens_.size());
+  printf("acquired %li tokens\n", tokens_.size());
 
   // release all tokens. same as: tokenpool_->Clear();
-  printf("releasing %i tokens\n", (int) tokens_.size());
+  printf("releasing %li tokens\n", tokens_.size());
   while (tokens_.size() > 0) {
     token = tokens_.back();
     printf("tokenpool_->ReleaseToken %i\n", token);
