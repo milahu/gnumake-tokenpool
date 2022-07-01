@@ -54,6 +54,8 @@ class JobClient:
     self._fdWrite = None
     self._maxJobs = None
     self._maxLoad = None
+    self._fileRead = None
+    self._fileWrite = None
 
     makeFlags = os.environ.get("MAKEFLAGS", "")
     if makeFlags:
@@ -99,10 +101,10 @@ class JobClient:
       # the file handles will be closed
       # but the pipes will stay open
       _debug and _log(f"init: using named pipes: {named_pipes}")
-      fileRead = open(named_pipes[0], "r")
-      fileWrite = open(named_pipes[1], "w")
-      self._fdRead = fileRead.buffer.fileno()
-      self._fdWrite = fileWrite.buffer.fileno()
+      self._fileRead = open(named_pipes[0], "r")
+      self._fileWrite = open(named_pipes[1], "w")
+      self._fdRead = self._fileRead.buffer.fileno()
+      self._fdWrite = self._fileWrite.buffer.fileno()
 
     if max_jobs:
       _debug and _log(f"init: using max_jobs: {max_jobs}")
