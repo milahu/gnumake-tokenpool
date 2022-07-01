@@ -1,9 +1,12 @@
 import os, stat, select, signal, time, re
 from datetime import datetime
+from typing import List
 
 __version__ = '0.0.1'
 
 _debug = bool(os.environ.get("DEBUG_JOBCLIENT"))
+
+_debug2 = bool(os.environ.get("DEBUG_JOBCLIENT_2")) # more verbose
 
 _log = lambda *a, **k: print(f"jobclient.py {os.getpid()} {datetime.utcnow().strftime('%F %T.%f')}:", *a, **k)
 
@@ -37,18 +40,25 @@ class JobClient:
   you must acquire them all.
   """
 
-  def __init__(self):
-    makeFlags = os.environ.get("MAKEFLAGS")
-    if not makeFlags:
-      _debug and _log(f"init failed: MAKEFLAGS is empty")
-      raise NoJobServer()
-    _debug and _log(f"init: MAKEFLAGS: {makeFlags}")
+  def __init__(
+      self,
+      #makeflags: str or None = None, # TODO implement?
+      #fds = List[int] or None = None, # TODO implement?
+      named_pipes: List[str] or None = None,
+      max_jobs: int or None = None,
+      max_load: int or None = None,
+    ):
 
     self._fdRead = None
     self._fdReadDup = None
     self._fdWrite = None
     self._maxJobs = None
     self._maxLoad = None
+
+    makeFlags = os.environ.get("MAKEFLAGS", "")
+    if makeFlags:
+      _debug and _log(f"init: MAKEFLAGS: {makeFlags}")
+
     for flag in re.split(r"\s+", makeFlags):
       m = (
         re.fullmatch(r"--jobserver-auth=(\d+),(\d+)", flag) or
@@ -66,6 +76,42 @@ class JobClient:
       if m:
         self._maxLoad = int(m.group(1))
         continue
+
+    # test
+    if False:
+      if self._fdRead:
+        print("test: using named pipes")
+        pid = os.getpid()
+        named_pipes = [
+          f"/proc/{pid}/fd/{self._fdRead}",
+          f"/proc/{pid}/fd/{self._fdWrite}",
+        ]
+        if (
+          not os.path.exists(named_pipes[0]) or
+          not os.path.exists(named_pipes[1])
+        ):
+          named_pipes = None
+
+    if named_pipes:
+      # useful to read/write pipes of other processes
+      # example: f"/proc/{pid}/fd/3" and f"/proc/{pid}/fd/4"
+      # note: when JobClient is destroyed
+      # the file handles will be closed
+      # but the pipes will stay open
+      _debug and _log(f"init: using named pipes: {named_pipes}")
+      fileRead = open(named_pipes[0], "r")
+      fileWrite = open(named_pipes[1], "w")
+      self._fdRead = fileRead.buffer.fileno()
+      self._fdWrite = fileWrite.buffer.fileno()
+
+    if max_jobs:
+      _debug and _log(f"init: using max_jobs: {max_jobs}")
+      self._maxJobs = max_jobs
+
+    if max_load:
+      _debug and _log(f"init: using max_load: {max_load}")
+      self._maxLoad = max_load
+
     _debug and _log(f"init: fdRead = {self._fdRead}, fdWrite = {self._fdWrite}, " +
       f"maxJobs = {self._maxJobs}, maxLoad = {self._maxLoad}")
 
@@ -196,7 +242,7 @@ class JobClient:
     # timeout 0 -> non-blocking
     rlist, _wlist, _xlist = select.select([self._fdRead], [], [], 0)
     if len(rlist) == 0:
-      _debug and _log(f"acquire failed: fd is empty")
+      _debug2 and _log(f"acquire failed: fd is empty")
       return None
 
     #os.read(self._fdRead, 999) # test race condition: fd is empty 2
@@ -260,7 +306,7 @@ class JobClient:
       #time.sleep(100); buffer = b"" # test. note: this is not killed by fdReadDupClose
     except BlockingIOError as e:
       if e.errno == 11: # Resource temporarily unavailable
-        _debug and _log(f"acquire failed: fd is empty 2")
+        _debug2 and _log(f"acquire failed: fd is empty 2")
         return None # jobserver is full, try again later
       raise e # unexpected error
     except OSError as e:
