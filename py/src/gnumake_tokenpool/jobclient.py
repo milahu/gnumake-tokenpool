@@ -4,14 +4,6 @@ from typing import List
 
 __version__ = '0.0.1'
 
-# TODO move to __init__
-
-_debug = bool(os.environ.get("DEBUG_JOBCLIENT"))
-
-_debug2 = bool(os.environ.get("DEBUG_JOBCLIENT_2")) # more verbose
-
-_log = lambda *a, **k: print(f"jobclient.py {os.getpid()} {datetime.utcnow().strftime('%F %T.%f')}:", *a, **k)
-
 def _validateToken(token: int) -> None:
   if type(token) != int or token < 0 or 255 < token:
     raise InvalidToken()
@@ -61,15 +53,19 @@ class JobClient:
     self._fileRead = None
     self._fileWrite = None
 
-    if not debug is None:
-      _debug = debug
+    self._debug = bool(os.environ.get("DEBUG_JOBCLIENT"))
+    self._debug2 = bool(os.environ.get("DEBUG_JOBCLIENT_2")) # more verbose
+    self._log = lambda *a, **k: print(f"jobclient.py {os.getpid()} {datetime.utcnow().strftime('%F %T.%f')}:", *a, **k)
 
-    if not debug2 is None:
-      _debug2 = debug2
+    if debug != None:
+      self._debug = debug
+
+    if debug2 != None:
+      self._debug2 = debug2
 
     makeFlags = os.environ.get("MAKEFLAGS", "")
     if makeFlags:
-      _debug and _log(f"init: MAKEFLAGS: {makeFlags}")
+      self._debug and self._log(f"init: MAKEFLAGS: {makeFlags}")
 
     for flag in re.split(r"\s+", makeFlags):
       m = (
@@ -110,25 +106,25 @@ class JobClient:
       # note: when JobClient is destroyed
       # the file handles will be closed
       # but the pipes will stay open
-      _debug and _log(f"init: using named pipes: {named_pipes}")
+      self._debug and self._log(f"init: using named pipes: {named_pipes}")
       self._fileRead = open(named_pipes[0], "r")
       self._fileWrite = open(named_pipes[1], "w")
       self._fdRead = self._fileRead.buffer.fileno()
       self._fdWrite = self._fileWrite.buffer.fileno()
 
     if max_jobs:
-      _debug and _log(f"init: using max_jobs: {max_jobs}")
+      self._debug and self._log(f"init: using max_jobs: {max_jobs}")
       self._maxJobs = max_jobs
 
     if max_load:
-      _debug and _log(f"init: using max_load: {max_load}")
+      self._debug and self._log(f"init: using max_load: {max_load}")
       self._maxLoad = max_load
 
-    _debug and _log(f"init: fdRead = {self._fdRead}, fdWrite = {self._fdWrite}, " +
+    self._debug and self._log(f"init: fdRead = {self._fdRead}, fdWrite = {self._fdWrite}, " +
       f"maxJobs = {self._maxJobs}, maxLoad = {self._maxLoad}")
 
     if self._maxJobs == 1:
-      _debug and _log(f"init failed: maxJobs == 1")
+      self._debug and self._log(f"init failed: maxJobs == 1")
       raise NoJobServer()
     if self._fdRead == None:
       raise NoJobServer()
@@ -183,55 +179,55 @@ class JobClient:
         return os.stat(self._fdRead)
       except OSError as e:
         if e.errno == 9: # Bad file descriptor = pipe is closed
-          _debug and _log(f"init failed: fd {self._fdRead} stat failed: {e}")
+          self._debug and self._log(f"init failed: fd {self._fdRead} stat failed: {e}")
           raise NoJobServer()
         raise e # unexpected error
 
     # note: dont close the fds -> dont use open()
 
-    _debug and _log("init: test fdRead stat")
+    self._debug and self._log("init: test fdRead stat")
     statsRead = get_stat(self._fdRead)
 
-    _debug and _log("init: test fdRead pipe")
+    self._debug and self._log("init: test fdRead pipe")
     if not is_pipe(statsRead):
-      _debug and _log(f"init failed: fd {self._fdRead} is no pipe")
+      self._debug and self._log(f"init failed: fd {self._fdRead} is no pipe")
       raise NoJobServer()
 
-    _debug and _log("init: test fdRead readable")
+    self._debug and self._log("init: test fdRead readable")
     if not check_access(statsRead, "r"):
-      _debug and _log(f"init failed: fd {self._fdRead} is not readable")
+      self._debug and self._log(f"init failed: fd {self._fdRead} is not readable")
       raise NoJobServer()
 
-    _debug and _log("init: test fdWrite stat")
+    self._debug and self._log("init: test fdWrite stat")
     statsWrite = get_stat(self._fdWrite)
 
-    _debug and _log("init: test fdWrite pipe")
+    self._debug and self._log("init: test fdWrite pipe")
     if not is_pipe(statsWrite):
-      _debug and _log(f"init failed: fd {self._fdWrite} is no pipe")
+      self._debug and self._log(f"init failed: fd {self._fdWrite} is no pipe")
       raise NoJobServer()
 
-    _debug and _log("init: test fdWrite writable")
+    self._debug and self._log("init: test fdWrite writable")
     if not check_access(statsWrite, "w"):
-      _debug and _log(f"init failed: fd {self._fdWrite} is not writable")
+      self._debug and self._log(f"init failed: fd {self._fdWrite} is not writable")
       raise NoJobServer()
 
-    _debug and _log("init: test acquire ...")
+    self._debug and self._log("init: test acquire ...")
     token = None
     try:
       token = self.acquire()
     except OSError as e:
       if e.errno == 9: # Bad file descriptor = pipe is closed
-        _debug and _log(f"init failed: read error: {e}")
+        self._debug and self._log(f"init failed: read error: {e}")
         raise NoJobServer()
       raise e
     if token == None:
-      _debug and _log("init: test acquire failed. jobserver is full")
+      self._debug and self._log("init: test acquire failed. jobserver is full")
     else:
-      _debug and _log("init: test acquire ok")
-      _debug and _log("init: test release ...")
+      self._debug and self._log("init: test acquire ok")
+      self._debug and self._log("init: test release ...")
       self.release(token) # TODO handle errors
-      _debug and _log("init: test release ok")
-    _debug and _log("init: test ok")
+      self._debug and self._log("init: test release ok")
+    self._debug and self._log("init: test ok")
 
   @property
   def maxJobs(self) -> int or None:
@@ -254,7 +250,7 @@ class JobClient:
     # timeout 0 -> non-blocking
     rlist, _wlist, _xlist = select.select([self._fdRead], [], [], 0)
     if len(rlist) == 0:
-      _debug2 and _log(f"acquire failed: fd is empty")
+      self._debug2 and self._log(f"acquire failed: fd is empty")
       return None
 
     #os.read(self._fdRead, 999) # test race condition: fd is empty 2
@@ -273,13 +269,13 @@ class JobClient:
       self._fdReadDup = os.dup(self._fdRead)
 
     if not self._fdReadDup:
-      _debug and _log(f"acquire: failed to duplicate fd")
+      self._debug and self._log(f"acquire: failed to duplicate fd")
       return None
 
     fdReadDupClose = lambda: os.close(self._fdReadDup)
 
     def read_timeout_handler(_signum, _frame):
-      _debug and _log(f"acquire: read timeout")
+      self._debug and self._log(f"acquire: read timeout")
       fdReadDupClose()
 
     # TODO remove SIGCHLD handler. too high-level. dont manage worker procs here.
@@ -311,20 +307,20 @@ class JobClient:
 
     # 4.5. perform a blocking read of one byte
     # on the duplicate jobserver file descriptor
-    _debug and _log(f"acquire: read with timeout {read_timeout} ...")
+    self._debug and self._log(f"acquire: read with timeout {read_timeout} ...")
     buffer = b""
     try:
       buffer = os.read(self._fdReadDup, 1)
       #time.sleep(100); buffer = b"" # test. note: this is not killed by fdReadDupClose
     except BlockingIOError as e:
       if e.errno == 11: # Resource temporarily unavailable
-        _debug2 and _log(f"acquire failed: fd is empty 2")
+        self._debug2 and self._log(f"acquire failed: fd is empty 2")
         return None # jobserver is full, try again later
       raise e # unexpected error
     except OSError as e:
       if e.errno == 9: # EBADF: Bad file descriptor = pipe is closed
         # self._fdReadDup was closed by fdReadDupClose
-        _debug and _log(f"acquire: read failed: {e}")
+        self._debug and self._log(f"acquire: read failed: {e}")
         return None # jobserver is full, try again later
       raise e # unexpected error
 
@@ -340,23 +336,23 @@ class JobClient:
     #  return None
     assert len(buffer) == 1
     token = ord(buffer) # byte -> int8
-    _debug and _log(f"acquire: read ok. token = {token}")
+    self._debug and self._log(f"acquire: read ok. token = {token}")
     return token
 
   def release(self, token: int) -> None:
     _validateToken(token)
     buffer = token.to_bytes(1, byteorder='big') # int8 -> byte
     while True:
-      _debug and _log(f"release: write token {token} ...")
+      self._debug and self._log(f"release: write token {token} ...")
       try:
         bytesWritten = os.write(self._fdWrite, buffer)
         assert bytesWritten == 1
-        _debug and _log(f"release: write ok")
+        self._debug and self._log(f"release: write ok")
         return
       except (OSError, select.error) as e:
         # handle EINTR = interrupt
         # FIXME be more specific?
         # https://stackoverflow.com/questions/15474072/how-to-catch-eintr-in-python
         write_retry = 0.1
-        _debug and _log(f"release: write failed: {e} -> retry after {write_retry} seconds")
+        self._debug and self._log(f"release: write failed: {e} -> retry after {write_retry} seconds")
         time.sleep(write_retry) # throttle retry
