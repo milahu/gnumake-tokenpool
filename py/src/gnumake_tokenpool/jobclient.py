@@ -4,6 +4,8 @@ from typing import List
 
 __version__ = '0.0.1'
 
+# TODO move to __init__
+
 _debug = bool(os.environ.get("DEBUG_JOBCLIENT"))
 
 _debug2 = bool(os.environ.get("DEBUG_JOBCLIENT_2")) # more verbose
@@ -47,6 +49,8 @@ class JobClient:
       named_pipes: List[str] or None = None,
       max_jobs: int or None = None,
       max_load: int or None = None,
+      debug: bool or None = None,
+      debug2: bool or None = None,
     ):
 
     self._fdRead = None
@@ -56,6 +60,12 @@ class JobClient:
     self._maxLoad = None
     self._fileRead = None
     self._fileWrite = None
+
+    if not debug is None:
+      _debug = debug
+
+    if not debug2 is None:
+      _debug2 = debug2
 
     makeFlags = os.environ.get("MAKEFLAGS", "")
     if makeFlags:
