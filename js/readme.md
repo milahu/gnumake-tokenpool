@@ -23,3 +23,7 @@ jobClient.release(token);
 ```
 
 see also [test/jobclient/test.mjs](test/jobclient/test.mjs)
+
+## details
+
+for implementation details, see [details.md](details.md)
