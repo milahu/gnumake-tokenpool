@@ -339,7 +339,8 @@ class JobClient:
     self._debug and self._log(f"acquire: read ok. token = {token}")
     return token
 
-  def release(self, token: int) -> None:
+  def release(self, token: int = 43) -> None:
+    # default token: int 43 = char +
     _validateToken(token)
     buffer = token.to_bytes(1, byteorder='big') # int8 -> byte
     while True:
