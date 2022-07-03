@@ -15,6 +15,11 @@
 // to find the maximum number of free tokens,
 // you must acquire them all.
 
+// NOTE debug logging
+// callers like "rollup --silent" will hide debug output
+
+// TODO move code to jobclient.js
+
 const process = require('process');
 const fs = require('fs');
 const os = require('os');
