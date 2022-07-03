@@ -23,6 +23,7 @@
 const process = require('process');
 const fs = require('fs');
 const os = require('os');
+const child_process = require('child_process');
 
 
 
@@ -69,6 +70,47 @@ function validateToken(token) {
 
 
 
+/**
+* read with timeout. unix only
+*
+* https://stackoverflow.com/questions/20808126/how-to-timeout-an-fs-read-in-node-js
+*
+* @param {number | string} fdOrPath
+* @param {number} blockSize
+* @param {number} timeout
+*  param {child_process.SpawnOptions} options
+* @param {Object} options
+* @param {number} [options.numBlocks=1]
+* @param {string=} options.encoding
+*/
+function readWithTimeout(fdOrPath, blockSize, timeout, options = {}) {
+  if (!options) options = {};
+  const numBlocks = options.numBlocks || 1;
+  if (options.numBlocks) delete options.numBlocks;
+  if (options.timeout) throw Error('dont set options.timeout');
+  const ddArgs = [`bs=${blockSize}`, `count=${numBlocks}`, 'status=none'];
+  const stdio = [fdOrPath, 'pipe', 'pipe'];
+  if (typeof fdOrPath == 'string') {
+    if (!fs.existsSync(fdOrPath)) throw Error(`no such file: ${fdOrPath}`);
+    ddArgs.push(`if=${fdOrPath}`);
+    stdio[0] = null;
+  }
+  else if (typeof fdOrPath != 'number') {
+    throw Error(`fdOrPath must be number or string`);
+  }
+  //console.dir({ fdOrPath, blockSize, timeout, stdio, ddArgs });
+  const reader = child_process.spawnSync('dd', ddArgs, {
+    timeout,
+    stdio,
+    windowsHide: true,
+    ...options,
+  });
+  if (reader.error) throw reader.error;
+  return reader.stdout;
+}
+
+
+
 // jobClient factory
 exports.JobClient = function JobClient() {
 
@@ -100,21 +142,46 @@ exports.JobClient = function JobClient() {
     acquire: () => {
       let bytesRead = 0;
       debug && log(`acquire: read ...`);
+
+      /*
+      // test: empty pipe
+      const testBuffer = Buffer.alloc(999);
       try {
-        bytesRead = fs.readSync(fdRead, buffer);
+        bytesRead = fs.readSync(fdRead, testBuffer);
+        log(`acquire: done empty pipe. got ${bytesRead} tokens`);
       }
       catch (e) {
-        if (e.errno == -11) {
-          debug && log(`acquire: token = null`);
+        if (e.errno != -11) { // e.errno == -11: pipe is empty
+          log(`acquire: failed to empty pipe: e.errno ${e.errno}, e ${e}`);
+        }
+      }
+      bytesRead = 0;
+      */
+
+      // readSync with timeout via spawnSync
+      // similar: rpc-sync https://github.com/ForbesLindesay/sync-rpc
+      try {
+        const readLen = 1;
+        const readTimeout = 100;
+        const output = readWithTimeout(fdRead, readLen, readTimeout);
+        if (output.length == 0) {
+          debug && log(`acquire: read empty`);
           return null; // jobserver is full, try again later
         }
-        throw e;
+        const token = output.readInt8();
+        debug && log(`acquire: token = ${token}`);
+        return token;
       }
-      debug && log(`acquire: read done: ${bytesRead} bytes`);
-      if (bytesRead != 1) throw new Error('read failed');
-      const token = buffer.readInt8();
-      debug && log(`acquire: token = ${token}`);
-      return token;
+      catch (e) {
+        if (e.errno == -110) {
+          debug && log(`acquire: read timeout`);
+          return null; // jobserver is full, try again later
+        }
+        else {
+          debug && log(`acquire: read error: ${e}`);
+          throw e; // unexpected error
+        }
+      }
     },
     release: (token=43) => { // default token: str(+) == int(43)
       debug && log(`release: token = ${token}`);
