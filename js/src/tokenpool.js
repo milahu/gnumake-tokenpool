@@ -189,6 +189,7 @@ exports.JobClient = function JobClient() {
       buffer.writeInt8(token);
       let bytesWritten = 0;
       debug && log(`release: write ...`);
+      // TODO retry loop
       try {
         bytesWritten = fs.writeSync(fdWrite, buffer);
       }
