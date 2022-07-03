@@ -28,9 +28,7 @@ const os = require('os');
 
 const debug = Boolean(process.env.DEBUG_JOBCLIENT);
 
-const log = (msg) => console.error(`jobclient.js ${process.pid} ${new Date().toLocaleString('af')}.${String(Date.now() % 1000).padStart(3, '0')}: ${msg}`); // print to stderr
-
-
+const log = (msg) => console.error(`debug jobclient.js ${process.pid} ${new Date().toLocaleString('af')}.${String(Date.now() % 1000).padStart(3, '0')}: ${msg}`); // print to stderr
 
 function parseFlags(makeFlags) {
 
