@@ -1,4 +1,4 @@
-import os, stat, select, signal, time, re
+import sys, os, stat, select, signal, time, re
 from datetime import datetime
 from typing import List
 
@@ -55,7 +55,10 @@ class JobClient:
 
     self._debug = bool(os.environ.get("DEBUG_JOBCLIENT"))
     self._debug2 = bool(os.environ.get("DEBUG_JOBCLIENT_2")) # more verbose
-    self._log = lambda *a, **k: print(f"jobclient.py {os.getpid()} {datetime.utcnow().strftime('%F %T.%f')}:", *a, **k)
+
+    def _log(*a, **k):
+      k['file'] = sys.stderr
+      print(f"debug jobclient.py {os.getpid()} {datetime.utcnow().strftime('%F %T.%f')[:-3]}:", *a, **k)
 
     if debug != None:
       self._debug = debug
