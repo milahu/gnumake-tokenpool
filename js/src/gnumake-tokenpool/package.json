@@ -1,0 +1,18 @@
+{
+  "name": "gnumake-tokenpool",
+  "version": "0.0.5",
+  "description": "jobclient and jobserver for the GNU make tokenpool protocol",
+  "main": "tokenpool.js",
+  "types": "tokenpool.d.ts",
+  "exports": {
+    ".": {
+      "default": "./tokenpool.js",
+      "types": "./tokenpool.d.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "keywords": ["gnu", "make", "gnumake", "tokenpool", "jobqueue", "jobclient", "jobserver"],
+  "author": "milahu",
+  "license": "MIT",
+  "homepage": "https://github.com/milahu/gnumake-tokenpool"
+}
