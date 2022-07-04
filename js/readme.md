@@ -11,7 +11,7 @@ npm install git+https://github.com/milahu/gnumake-tokenpool
 ## usage
 
 ```js
-import { JobClient } from '@milahu/gnumake-tokenpool';
+import { JobClient } from 'gnumake-tokenpool';
 
 const jobClient = JobClient();
 
