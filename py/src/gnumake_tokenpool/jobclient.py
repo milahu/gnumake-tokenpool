@@ -2,7 +2,7 @@ import sys, os, stat, select, signal, time, re
 from datetime import datetime
 from typing import List
 
-__version__ = '0.0.1'
+__version__ = '0.0.2'
 
 def _validateToken(token: int) -> None:
   if type(token) != int or token < 0 or 255 < token:
