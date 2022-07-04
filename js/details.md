@@ -41,26 +41,37 @@ problem: [os.dup is not implemented in node](https://github.com/nodejs/node/issu
 
 `dup` works in c, c++, python
 
+problem: closeTimer is never called, program hangs after `read ...`
+
 ```js
-fdReadDup = os.dup(fdRead); // WONTFIX os.dup is not implemented in node
+const fs = require("fs");
+//const process = require("process");
+//const fdRead = parseInt(process.argv[1]);
+const fdRead = 0; // stdin
+const buf = Buffer.alloc(1);
 
-const closeTimer = setTimeout(() => {
+//var fdReadDup = os.dup(fdNum); // not implemented in node
+var fdReadDup = fs.openSync(`/proc/self/fd/${fdRead}`); // os.dup on linux
+var closeTimer = setTimeout(() => {
+  console.error("timeout");
   fdReadDup.close();
-}, 100);
-
-const buffer = Buffer.alloc(1);
+}, 1000);
 try {
-  bytesRead = fs.readSync(fdReadDup, buffer);
+  console.error(`read ...`);
+  fs.readSync(fdReadDup, buf);
   clearTimeout(closeTimer);
-}
-catch (e) {
+  console.error(`read done`);
+  const token = buffer.readInt8();
+  console.log(`acquired token ${token}`);
+} catch (e) {
   clearTimeout(closeTimer);
   if (e.errno == -11) {
-    return null; // jobserver is full, try again later
+    console.log("jobserver is full");
   }
-  throw e;
+  else {
+    console.error(`error ${e}`);
+  }
 }
-const token = buffer.readInt8();
 ```
 
 ### write invalid token
@@ -90,4 +101,27 @@ catch (e) {
   throw e;
 }
 const token = buffer.readInt8();
+```
+
+## memory usage
+
+aka resident set size (RSS)
+
+```sh
+$(which time) -v dd bs=1 count=1 status=none
+# Maximum resident set size (kbytes): 3780
+
+$(which time) -v sh -c 'read -n1 -t0.1'
+# Maximum resident set size (kbytes): 3920
+
+printf + | $(which time) -v node -e '
+  var fs = require("fs");
+  var process = require("process");
+  var buf = Buffer.alloc(1);
+  try {
+    fs.readSync(parseInt(process.argv[1]), buf);
+    console.log(buf.readInt8());
+  } catch (e) {}
+' 0
+# Maximum resident set size (kbytes): 40376
 ```
