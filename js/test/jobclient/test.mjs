@@ -1,5 +1,5 @@
 //import { JobClient } from 'gnumake-tokenpool';
-import { JobClient } from '../../src/tokenpool.js';
+import { JobClient } from '../../src/gnumake-tokenpool/tokenpool.js';
 
 //import process from 'process';
 

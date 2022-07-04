@@ -2,12 +2,12 @@
   "name": "gnumake-tokenpool",
   "version": "0.0.5",
   "description": "jobclient and jobserver for the GNU make tokenpool protocol",
-  "main": "js/src/tokenpool.js",
-  "types": "js/src/tokenpool.d.ts",
+  "main": "js/src/gnumake-tokenpool/tokenpool.js",
+  "types": "js/src/gnumake-tokenpool/tokenpool.d.ts",
   "exports": {
     ".": {
-      "default": "./js/src/tokenpool.js",
-      "types": "./js/src/tokenpool.d.ts"
+      "default": "./js/src/gnumake-tokenpool/tokenpool.js",
+      "types": "./js/src/gnumake-tokenpool/tokenpool.d.ts"
     },
     "./package.json": "./package.json"
   },
