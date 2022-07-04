@@ -1,6 +1,6 @@
 {
   "name": "@milahu/gnumake-tokenpool",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "jobclient and jobserver for the GNU make tokenpool protocol",
   "main": "js/src/tokenpool.js",
   "types": "js/src/tokenpool.d.ts",
