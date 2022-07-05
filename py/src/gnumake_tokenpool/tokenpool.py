@@ -36,8 +36,13 @@ class JobClient:
     self._fileRead = None
     self._fileWrite = None
 
-    self._debug = debug or bool(os.environ.get("DEBUG_JOBCLIENT"))
-    self._debug2 = debug2 or bool(os.environ.get("DEBUG_JOBCLIENT_2")) # more verbose
+    self._debug = bool(os.environ.get("DEBUG_JOBCLIENT"))
+    self._debug2 = bool(os.environ.get("DEBUG_JOBCLIENT_2")) # more verbose
+
+    if debug != None:
+      self._debug = debug
+    if debug2 != None:
+      self._debug2 = debug2
 
     self._log = self._get_log(self._debug)
     self._log2 = self._get_log(self._debug2)
