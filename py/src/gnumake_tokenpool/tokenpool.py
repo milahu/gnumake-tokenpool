@@ -27,7 +27,7 @@ class JobClient:
       max_load: int or None = None,
       debug: bool or None = None,
       debug2: bool or None = None,
-      use_cysignals: bool = False,
+      use_cysignals: bool = None,
     ):
 
     self._fdRead = None
@@ -49,9 +49,14 @@ class JobClient:
     self._log = self._get_log(self._debug)
     self._log2 = self._get_log(self._debug2)
 
-    if use_cysignals:
-      from cysignals import changesignal
-      self._changesignal = changesignal
+    if use_cysignals is not False:
+      try:
+        from cysignals import changesignal
+      except ImportError:
+        if use_cysignals:
+          raise
+      else:
+        self._changesignal = changesignal
 
     makeFlags = os.environ.get("MAKEFLAGS", "")
     if makeFlags:
