@@ -51,11 +51,12 @@ class JobClient:
 
     if use_cysignals is not False:
       try:
-        from cysignals import changesignal
+        from cysignals.pysignals import changesignal
       except ImportError:
         if use_cysignals:
           raise
       else:
+        self._log("init: using cysignals.pysignals.changesignal")
         self._changesignal = changesignal
 
     makeFlags = os.environ.get("MAKEFLAGS", "")
