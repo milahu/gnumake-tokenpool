@@ -183,34 +183,34 @@ class JobClient:
     # SIGALRM = timer has fired = read timeout
     old_sigalrm_handler = signal.signal(signal.SIGALRM, read_timeout_handler)
 
-    # Set SA_RESTART to limit EINTR occurrences.
-    # by default, signal.signal clears the SA_RESTART flag.
-    # TODO is this necessary?
-    signal.siginterrupt(signal.SIGALRM, False)
-
-    read_timeout = 0.1
-    signal.setitimer(signal.ITIMER_REAL, read_timeout) # set timer for SIGALRM. unix only
-
-    # blocking read
-    self._log(f"acquire: read with timeout {read_timeout} ...")
-    buffer = b""
     try:
-      buffer = os.read(self._fdReadDup, 1)
-    except BlockingIOError as e:
-      if e.errno == 11: # Resource temporarily unavailable
-        self._log2(f"acquire failed: fd is empty 2")
-        return None # jobserver is full, try again later
-      raise e # unexpected error
-    except OSError as e:
-      if e.errno == 9: # EBADF: Bad file descriptor = pipe is closed
-        self._log(f"acquire: read failed: {e}")
-        return None # jobserver is full, try again later
-      raise e # unexpected error
+        # Set SA_RESTART to limit EINTR occurrences.
+        # by default, signal.signal clears the SA_RESTART flag.
+        # TODO is this necessary?
+        signal.siginterrupt(signal.SIGALRM, False)
 
-    signal.setitimer(signal.ITIMER_REAL, 0) # clear timer. unix only
+        read_timeout = 0.1
+        signal.setitimer(signal.ITIMER_REAL, read_timeout) # set timer for SIGALRM. unix only
 
-    # clear signal handlers
-    signal.signal(signal.SIGALRM, old_sigalrm_handler)
+        # blocking read
+        self._log(f"acquire: read with timeout {read_timeout} ...")
+        buffer = b""
+        try:
+          buffer = os.read(self._fdReadDup, 1)
+        except BlockingIOError as e:
+          if e.errno == 11: # Resource temporarily unavailable
+            self._log2(f"acquire failed: fd is empty 2")
+            return None # jobserver is full, try again later
+          raise e # unexpected error
+        except OSError as e:
+          if e.errno == 9: # EBADF: Bad file descriptor = pipe is closed
+            self._log(f"acquire: read failed: {e}")
+            return None # jobserver is full, try again later
+          raise e # unexpected error
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0) # clear timer. unix only
+        # clear signal handlers
+        signal.signal(signal.SIGALRM, old_sigalrm_handler)
 
     #if len(buffer) == 0:
     #  return None
