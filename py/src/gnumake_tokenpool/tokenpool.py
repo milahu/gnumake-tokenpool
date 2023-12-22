@@ -1,7 +1,8 @@
 import sys, os, stat, select, signal, time, re
+
+from contextlib import contextmanager
 from datetime import datetime
 from typing import List
-
 
 __version__ = '0.0.3'
 
@@ -26,6 +27,7 @@ class JobClient:
       max_load: int or None = None,
       debug: bool or None = None,
       debug2: bool or None = None,
+      use_cysignals: bool = None,
     ):
 
     self._fdRead = None
@@ -46,6 +48,16 @@ class JobClient:
 
     self._log = self._get_log(self._debug)
     self._log2 = self._get_log(self._debug2)
+
+    if use_cysignals is not False:
+      try:
+        from cysignals.pysignals import changesignal
+      except ImportError:
+        if use_cysignals:
+          raise
+      else:
+        self._log("init: using cysignals.pysignals.changesignal")
+        self._changesignal = changesignal
 
     makeFlags = os.environ.get("MAKEFLAGS", "")
     if makeFlags:
@@ -181,36 +193,33 @@ class JobClient:
       os.close(self._fdReadDup)
 
     # SIGALRM = timer has fired = read timeout
-    old_sigalrm_handler = signal.signal(signal.SIGALRM, read_timeout_handler)
+    with self._changesignal(signal.SIGALRM, read_timeout_handler):
+      try:
+        # Set SA_RESTART to limit EINTR occurrences.
+        # by default, signal.signal clears the SA_RESTART flag.
+        # TODO is this necessary?
+        signal.siginterrupt(signal.SIGALRM, False)
 
-    # Set SA_RESTART to limit EINTR occurrences.
-    # by default, signal.signal clears the SA_RESTART flag.
-    # TODO is this necessary?
-    signal.siginterrupt(signal.SIGALRM, False)
+        read_timeout = 0.1
+        signal.setitimer(signal.ITIMER_REAL, read_timeout) # set timer for SIGALRM. unix only
 
-    read_timeout = 0.1
-    signal.setitimer(signal.ITIMER_REAL, read_timeout) # set timer for SIGALRM. unix only
-
-    # blocking read
-    self._log(f"acquire: read with timeout {read_timeout} ...")
-    buffer = b""
-    try:
-      buffer = os.read(self._fdReadDup, 1)
-    except BlockingIOError as e:
-      if e.errno == 11: # Resource temporarily unavailable
-        self._log2(f"acquire failed: fd is empty 2")
-        return None # jobserver is full, try again later
-      raise e # unexpected error
-    except OSError as e:
-      if e.errno == 9: # EBADF: Bad file descriptor = pipe is closed
-        self._log(f"acquire: read failed: {e}")
-        return None # jobserver is full, try again later
-      raise e # unexpected error
-
-    signal.setitimer(signal.ITIMER_REAL, 0) # clear timer. unix only
-
-    # clear signal handlers
-    signal.signal(signal.SIGALRM, old_sigalrm_handler)
+        # blocking read
+        self._log(f"acquire: read with timeout {read_timeout} ...")
+        buffer = b""
+        try:
+          buffer = os.read(self._fdReadDup, 1)
+        except BlockingIOError as e:
+          if e.errno == 11: # Resource temporarily unavailable
+            self._log2(f"acquire failed: fd is empty 2")
+            return None # jobserver is full, try again later
+          raise e # unexpected error
+        except OSError as e:
+          if e.errno == 9: # EBADF: Bad file descriptor = pipe is closed
+            self._log(f"acquire: read failed: {e}")
+            return None # jobserver is full, try again later
+          raise e # unexpected error
+      finally:
+        signal.setitimer(signal.ITIMER_REAL, 0) # clear timer. unix only
 
     #if len(buffer) == 0:
     #  return None
@@ -292,3 +301,13 @@ class JobClient:
         self._log(f"init failed: fd {fd} stat failed: {e}")
         raise NoJobServer()
       raise e # unexpected error
+
+  @staticmethod
+  @contextmanager
+  def _changesignal(sig, action):
+    old_sig_handler = signal.signal(sig, action)
+    try:
+      yield
+    finally:
+      # clear signal handler
+      signal.signal(sig, old_sig_handler)
