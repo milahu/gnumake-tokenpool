@@ -33,16 +33,22 @@ const log = (msg) => console.error(`debug jobclient.js ${process.pid} ${new Date
 
 function parseFlags(makeFlags) {
 
-  let fdRead, fdWrite, maxJobs, maxLoad;
+  let fdRead, fdWrite, fifoPath, maxJobs, maxLoad;
 
   for (const flag of makeFlags.split(/\s+/)) {
     let match;
     if (
-      (match = flag.match(/^--jobserver-auth=(\d+),(\d+)$/)) ||
-      (match = flag.match(/^--jobserver-fds=(\d+),(\d+)$/))
+      (match = flag.match(/^--jobserver-(?:auth|fds)=(?:(\d+),(\d+)|fifo:(.*))$/))
     ) {
-      fdRead = parseInt(match[1]);
-      fdWrite = parseInt(match[2]);
+      if (match[1] && match[2]) {
+        // make --jobserver-style=pipe
+        fdRead = parseInt(match[1]);
+        fdWrite = parseInt(match[2]);
+      }
+      else if (match[3]) {
+        // make --jobserver-style=fifo
+        fifoPath = match[3];
+      }
     }
     else if (match = flag.match(/^-j(\d+)$/)) {
       maxJobs = parseInt(match[1]);
@@ -52,7 +58,7 @@ function parseFlags(makeFlags) {
     }
   }
 
-  return { fdRead, fdWrite, maxJobs, maxLoad };
+  return { fdRead, fdWrite, fifoPath, maxJobs, maxLoad };
 }
 
 
@@ -197,7 +203,15 @@ exports.JobClient = function JobClient() {
   }
   debug && log(`init: MAKEFLAGS: ${makeFlags}`);
 
-  const { fdRead, fdWrite, maxJobs, maxLoad } = parseFlags(makeFlags);
+  const flags = parseFlags(makeFlags);
+
+  const fdFifo = flags.fifoPath && fs.openSync(flags.fifoPath, 'a+');
+
+  const fdRead = flags.fdRead || fdFifo;
+  const fdWrite = flags.fdWrite || fdFifo;
+
+  const { maxJobs, maxLoad } = flags;
+
   debug && log(`init: fdRead = ${fdRead}, fdWrite = ${fdWrite}, maxJobs = ${maxJobs}, maxLoad = ${maxLoad}`);
 
   if (fdRead == undefined) {
@@ -279,6 +293,11 @@ exports.JobClient = function JobClient() {
       debug && log(`release: write done: ${bytesWritten} bytes`);
       if (bytesWritten != 1) throw new Error('write failed');
       return true; // success
+    },
+    close: () => {
+      if (fdFifo) {
+        fs.closeSync(fdFifo);
+      }
     },
   };
 

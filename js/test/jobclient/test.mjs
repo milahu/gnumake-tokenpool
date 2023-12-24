@@ -101,5 +101,7 @@ else {
     console.log(`test: released token ${token}. tokenList.length = ${tokenList.length}`);
     //await sleep(100);
   }
+
+  jobClient.close();
 }
 console.log('');
