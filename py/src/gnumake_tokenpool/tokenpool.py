@@ -33,6 +33,8 @@ class JobClient:
     self._fdRead = None
     self._fdReadDup = None
     self._fdWrite = None
+    self._fifoPath = None
+    self._fdFifo = None
     self._maxJobs = None
     self._maxLoad = None
     self._fileRead = None
@@ -66,13 +68,15 @@ class JobClient:
     # parse
 
     for flag in re.split(r"\s+", makeFlags):
-      m = (
-        re.fullmatch(r"--jobserver-auth=(\d+),(\d+)", flag) or
-        re.fullmatch(r"--jobserver-fds=(\d+),(\d+)", flag)
-      )
+      m = re.fullmatch(r"--jobserver-(?:auth|fds)=(?:(\d+),(\d+)|fifo:(.*))", flag)
       if m:
-        self._fdRead = int(m.group(1))
-        self._fdWrite = int(m.group(2))
+        if m.group(1) and m.group(2):
+          self._fdRead = int(m.group(1))
+          self._fdWrite = int(m.group(2))
+          self._log(f"init: found jobserver pipes: {self._fdRead},{self._fdWrite}")
+        elif m.group(3):
+          self._fifoPath = m.group(3)
+          self._log(f"init: found jobserver fifo: {self._fifoPath}")
         continue
       m = re.fullmatch(r"-j(\d+)", flag)
       if m:
@@ -92,6 +96,11 @@ class JobClient:
       self._fileWrite = open(named_pipes[1], "w")
       self._fdRead = self._fileRead.buffer.fileno()
       self._fdWrite = self._fileWrite.buffer.fileno()
+    elif self._fifoPath:
+      self._log(f"init: using jobserver fifo: {self._fifoPath}")
+      self._fdFifo = os.open(self._fifoPath, os.O_RDWR)
+      self._fdRead = self._fdFifo
+      self._fdWrite = self._fdFifo
 
     if max_jobs:
       self._log(f"init: using max_jobs: {max_jobs}")
@@ -155,6 +164,11 @@ class JobClient:
       self.release(token) # TODO handle errors
       self._log("init: test release ok")
     self._log("init: test ok")
+
+
+  def __del__(self):
+    if self._fdFifo:
+      os.close(self._fdFifo)
 
 
   @property
