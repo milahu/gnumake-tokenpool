@@ -83,7 +83,7 @@ function validateToken(token) {
 * @param {number} [options.numBlocks=1]
 * @param {string=} options.encoding
 */
-function readWithTimeout(fdOrPath, blockSize, timeout, options = {}) {
+function readWithTimeoutDD(fdOrPath, blockSize, timeout, options = {}) {
   if (!options) options = {};
   const numBlocks = options.numBlocks || 1;
   if (options.numBlocks) delete options.numBlocks;
@@ -100,6 +100,80 @@ function readWithTimeout(fdOrPath, blockSize, timeout, options = {}) {
   }
   //console.dir({ fdOrPath, blockSize, timeout, stdio, ddArgs });
   const reader = child_process.spawnSync('dd', ddArgs, {
+    timeout,
+    stdio,
+    windowsHide: true,
+    ...options,
+  });
+  if (reader.error) throw reader.error;
+  return reader.stdout;
+}
+
+
+
+/**
+* read with timeout
+* @param {number | string} fdOrPath
+* @param {number} size
+* @param {number} timeout
+* @param {Object} options
+* @param {number} [options.blockSize=4096]
+* @param {string=} options.encoding
+*/
+function readWithTimeoutNode(fdOrPath, size, timeout, options = {}) {
+  if (!options) options = {};
+  if (typeof(fdOrPath) != 'number') {
+    throw Error(`reading from path not implemented. fdOrPath must be number`);
+  }
+  if (typeof(size) != 'number') {
+    throw Error(`invalid size: ${size}`);
+  }
+  size = size | 0; // enforce integer size
+  if (size < 0) {
+    // TODO "size == -1" means: read until EOF
+    throw Error(`invalid size: ${size}`);
+  }
+  if (size == 0) {
+    // for child_process.execSync the default encoding is "buffer"
+    // https://nodejs.org/api/child_process.html#child_processexecsynccommand-options
+    if (!options.encoding || options.encoding == 'buffer') {
+      return Buffer.alloc(0);
+    }
+    // FIXME handle "unrecognized character encoding"
+    // If encoding is 'buffer', or an unrecognized character encoding, Buffer objects will be passed to the callback instead.
+    //if (is_unrecognized(options.encoding)) return Buffer.alloc(0);
+    return '';
+  }
+  const blockSizeDefault = 4096; // TODO better? 64 * 1024?
+  const blockSize = Math.min(size, (Number(options.blockSize) | 0) || blockSizeDefault);
+  if (options.blockSize) delete options.blockSize;
+  if (options.timeout) throw Error('dont set options.timeout, use the timeout parameter');
+  const nodeCode = [
+    "const {stdout} = require('process');",
+    "const {readSync} = require('fs');",
+    "const {Buffer} = require('buffer');",
+    `const buf = Buffer.alloc(${blockSize});`,
+    "let done = 0;",
+    "const sleep = ms => new Promise(r => setTimeout(r, ms));",
+    "async function main() {",
+    `  while (done < ${size}) {`,
+    `    const n = readSync(${fdOrPath}, buf, 0, ${blockSize}, -1);`,
+    "    if (n > 0) stdout.write(buf);",
+    "    done += n;",
+    // reduce cpu time from 100% to 0%
+    // 200ms is arbitrary, 50ms would be enough to reduce cpu time
+    "    await sleep(200);",
+    "  }",
+    "}",
+    "main();",
+  ].join('\n');
+  console.log('nodeCode:\n' + nodeCode); // debug
+  const nodeExe = process.argv[0];
+  const nodeArgs = ['-e', nodeCode];
+  // connect fdOrPath to stdin of the subprocess
+  const stdio = [fdOrPath, 'pipe', 'pipe'];
+  //console.dir({ fdOrPath, size, timeout, stdio, nodeArgs });
+  const reader = child_process.spawnSync(nodeExe, nodeArgs, {
     timeout,
     stdio,
     windowsHide: true,
@@ -137,6 +211,11 @@ exports.JobClient = function JobClient() {
   }
 
   const buffer = Buffer.alloc(1);
+
+  // TODO switch: if the "dd" command is available, use readWithTimeoutDD
+  // otherwise, fall back to readWithTimeoutNode
+
+  const readWithTimeout = readWithTimeoutDD;
 
   const jobClient = {
     acquire: () => {
