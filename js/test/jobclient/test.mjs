@@ -5,12 +5,50 @@ import { JobClient } from '../../src/gnumake-tokenpool/tokenpool.js';
 
 //const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-//console.log(`test: ${process.argv.slice(2).join(' ')}`);
+const testName = process.argv.slice(2).join(' ');
+
+//console.log(`test: ${testName}`);
 
 const jobClient = JobClient();
 
+function parseFlags(makeFlags) {
+
+  let fdRead, fdWrite, maxJobs, maxLoad;
+
+  for (const flag of makeFlags.split(/\s+/)) {
+    let match;
+    if (
+      (match = flag.match(/^--jobserver-auth=(\d+),(\d+)$/)) ||
+      (match = flag.match(/^--jobserver-fds=(\d+),(\d+)$/))
+    ) {
+      fdRead = parseInt(match[1]);
+      fdWrite = parseInt(match[2]);
+    }
+    else if (match = flag.match(/^-j(\d+)$/)) {
+      maxJobs = parseInt(match[1]);
+    }
+    else if (match = flag.match(/^-l(\d+)$/)) {
+      maxLoad = parseInt(match[1]);
+    }
+  }
+
+  return { fdRead, fdWrite, maxJobs, maxLoad };
+}
+
+const makeFlags = process.env.MAKEFLAGS;
+if (!makeFlags) {
+  console.log(`test failed: MAKEFLAGS is empty`);
+  process.exit(1);
+}
+//console.log(`init: MAKEFLAGS: ${makeFlags}`);
+
+const { fdRead, fdWrite, maxJobs, maxLoad } = parseFlags(makeFlags);
+
 if (!jobClient) {
-  console.log(`test: jobClient init failed`);
+  if (testName == 'jobserver on' && maxJobs > 1) {
+    console.log(`test: jobClient init failed`);
+    process.exit(1);
+  }
 }
 else {
   console.log(`test: jobClient init ok`);
