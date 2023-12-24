@@ -1,10 +1,46 @@
 import sys
+import os
+import re
 import gnumake_tokenpool
+
+testName = sys.argv[1]
+
+# parse MAKEFLAGS
+
+makeFlags = os.environ.get("MAKEFLAGS", "")
+if makeFlags:
+  print(f"test: MAKEFLAGS: {makeFlags}")
+
+fdRead = None
+fdWrite = None
+fifoPath = None
+maxJobs = None
+maxLoad = None
+
+for flag in re.split(r"\s+", makeFlags):
+  m = re.fullmatch(r"--jobserver-(?:auth|fds)=(?:(\d+),(\d+)|fifo:(.*))", flag)
+  if m:
+    if m.group(1) and m.group(2):
+      fdRead = int(m.group(1))
+      fdWrite = int(m.group(2))
+    elif m.group(3):
+      fifoPath = m.group(2)
+    continue
+  m = re.fullmatch(r"-j(\d+)", flag)
+  if m:
+    maxJobs = int(m.group(1))
+    continue
+  m = re.fullmatch(r"-l(\d+)", flag)
+  if m:
+    maxLoad = int(m.group(1))
+    continue
 
 try:
   jobClient = gnumake_tokenpool.JobClient()
 except gnumake_tokenpool.NoJobServer:
   print(f"test: jobClient init failed")
+  if testName == "jobserver on" and maxJobs > 1:
+    sys.exit(1)
   sys.exit(0)
 
 print()
