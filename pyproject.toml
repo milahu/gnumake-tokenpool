@@ -7,6 +7,7 @@ name = "gnumake_tokenpool"
 authors = [{name = "Milan Hauth", email = "milahu@gmail.com"}]
 description = "jobclient and jobserver for the GNU make tokenpool protocol"
 keywords = ["jobclient", "jobserver", "gnumake", "tokenpool", "jobqueue", "job", "queue", "gnu", "make"]
+readme = {file = 'readme.md', content-type='text/markdown'}
 license = {text = "MIT"}
 classifiers = [
     "Programming Language :: Python :: 3",
