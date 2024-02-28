@@ -2,7 +2,7 @@ import sys, os, stat, select, signal, time, re
 
 from contextlib import contextmanager
 from datetime import datetime
-from typing import List
+from typing import List, Any, Iterator, Never
 
 __version__ = '0.0.6'
 
@@ -22,17 +22,17 @@ class JobClient:
       self,
       #makeflags: str or None = None, # TODO implement?
       #fds = List[int] or None = None, # TODO implement?
-      named_pipes: List[str] or None = None,
-      max_jobs: int or None = None,
-      max_load: int or None = None,
-      debug: bool or None = None,
-      debug2: bool or None = None,
-      use_cysignals: bool = None,
+      named_pipes: List[str] | None = None,
+      max_jobs: int | None = None,
+      max_load: int | None = None,
+      debug: bool | None = None,
+      debug2: bool | None = None,
+      use_cysignals: bool | None = None,
     ):
 
-    self._fdRead = None
-    self._fdReadDup = None
-    self._fdWrite = None
+    self._fdRead: int | None = None
+    self._fdReadDup: int | None = None
+    self._fdWrite: int | None = None
     self._fifoPath = None
     self._fdFifo = None
     self._maxJobs = None
@@ -43,9 +43,9 @@ class JobClient:
     self._debug = bool(os.environ.get("DEBUG_JOBCLIENT"))
     self._debug2 = bool(os.environ.get("DEBUG_JOBCLIENT_2")) # more verbose
 
-    if debug != None:
+    if debug is not None:
       self._debug = debug
-    if debug2 != None:
+    if debug2 is not None:
       self._debug2 = debug2
 
     self._log = self._get_log(self._debug)
@@ -59,7 +59,7 @@ class JobClient:
           raise
       else:
         self._log("init: using cysignals.pysignals.changesignal")
-        self._changesignal = changesignal
+        self._changesignal = changesignal   # type: ignore
 
     makeFlags = os.environ.get("MAKEFLAGS", "")
     if makeFlags:
@@ -117,7 +117,7 @@ class JobClient:
       self._log(f"init failed: maxJobs == 1")
       raise NoJobServer()
 
-    if self._fdRead == None or self._fdWrite == None:
+    if self._fdRead is None or self._fdWrite is None:
       self._log(f"init failed: no fds")
       raise NoJobServer()
 
@@ -156,7 +156,7 @@ class JobClient:
         self._log(f"init failed: read error: {e}")
         raise NoJobServer()
       raise e
-    if token == None:
+    if token is None:
       self._log("init: test acquire failed. jobserver is full")
     else:
       self._log("init: test acquire ok")
@@ -166,22 +166,22 @@ class JobClient:
     self._log("init: test ok")
 
 
-  def __del__(self):
+  def __del__(self) -> None:
     if self._fdFifo:
       os.close(self._fdFifo)
 
 
   @property
-  def maxJobs(self) -> int or None:
+  def maxJobs(self) -> int | None:
     return self._maxJobs
 
 
   @property
-  def maxLoad(self) -> int or None:
+  def maxLoad(self) -> int | None:
     return self._maxLoad
 
 
-  def acquire(self) -> int or None:
+  def acquire(self) -> int | None:
     # http://make.mad-scientist.net/papers/jobserver-implementation/
 
     # check if fdRead is readable
@@ -194,16 +194,16 @@ class JobClient:
     # between select and read, another process can read from the pipe.
     # when the pipe is empty, read can block forever.
     # by closing fdReadDup, we interrupt read
-    if not self._fdReadDup:
+    if self._fdRead and not self._fdReadDup:
       self._fdReadDup = os.dup(self._fdRead)
 
     if not self._fdReadDup:
       self._log(f"acquire: failed to duplicate fd")
       return None
 
-    def read_timeout_handler(_signum, _frame):
+    def read_timeout_handler(_signum: int, _frame: Any) -> None:
       self._log(f"acquire: read timeout")
-      fdReadDupClose()
+      assert self._fdReadDup
       os.close(self._fdReadDup)
 
     # SIGALRM = timer has fired = read timeout
@@ -246,7 +246,7 @@ class JobClient:
 
   def release(self, token: int = 43) -> None:
     # default token: int 43 = char +
-
+    assert self._fdWrite
     self._validateToken(token)
     buffer = token.to_bytes(1, byteorder='big') # int8 -> byte
     while True: # retry loop
@@ -270,19 +270,19 @@ class JobClient:
       raise InvalidToken()
 
 
-  def _get_log(self, debug: bool):
+  def _get_log(self, debug: bool) -> Any:
     if debug:
-      def _log(*a, **k):
+      def _log(*a: Any, **k: Any) -> None:
         k['file'] = sys.stderr
         print(f"debug jobclient.py {os.getpid()} {datetime.utcnow().strftime('%F %T.%f')[:-3]}:", *a, **k)
       return _log
-    def _log(*a, **k):
-      pass
-    return _log
+    else:
+      def _log(*a: Any, **k: Any) -> None:
+        pass
+      return _log
 
 
-  def _check_access(self, s, check="r"):
-    #s = os.stat(path)
+  def _check_access(self, s: os.stat_result, check: str = "r") -> int:
     u = os.geteuid()
     g = os.getegid()
     m = s.st_mode
@@ -301,13 +301,13 @@ class JobClient:
     raise ValueError("check must be r or w")
 
 
-  def _is_pipe(self, s):
+  def _is_pipe(self, s: os.stat_result) -> bool:
     if not stat.S_ISFIFO(s.st_mode):
       return False
     return True
 
 
-  def _get_stat(self, fd):
+  def _get_stat(self, fd: int) -> os.stat_result:
     try:
       return os.stat(fd)
     except OSError as e:
@@ -318,7 +318,7 @@ class JobClient:
 
   @staticmethod
   @contextmanager
-  def _changesignal(sig, action):
+  def _changesignal(sig: int, action: Any) -> Iterator[None]:
     old_sig_handler = signal.signal(sig, action)
     try:
       yield
