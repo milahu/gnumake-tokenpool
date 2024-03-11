@@ -14,6 +14,31 @@ class InvalidToken(Exception):
   pass
 
 
+# pipe one byte from stdin to stdout
+# test: printf + | python -c "import os; os.write(1, os.read(0, 1))"
+# raise OSError("test: asdf") # test exception
+# sys.exit(123) # test error
+# import time; time.sleep(999) # test timeout
+# if e.errno == 11: # Resource temporarily unavailable
+# if e.errno == 9: # EBADF: Bad file descriptor = pipe is closed
+_read_byte_py = """
+import os
+try:
+  _bytes = os.read(0, 1)
+except BlockingIOError as e:
+  if e.errno == 11:
+    import sys
+    sys.exit(e.errno)
+  raise e
+except OSError as e:
+  if e.errno == 9:
+    import sys
+    sys.exit(e.errno)
+  raise e
+os.write(1, _bytes)
+"""
+
+
 def _parse_exception(_bytes):
   print("_bytes", repr(_bytes))
   e_msg = _bytes.strip()
@@ -227,32 +252,9 @@ class JobClient:
       self._log2(f"acquire failed: fd is empty")
       return None
 
-    # pipe one byte from stdin to stdout
-    # test: printf + | python -c "import os; os.write(1, os.read(0, 1))"
-    read_byte_py = "\n".join((
-      #'raise OSError("test: asdf")', # test exception
-      'import sys',
-      'import os',
-      #'sys.exit(123)', # test error
-      #'import time; time.sleep(999)', # test timeout
-      'try:',
-      #'  _bytes = os.read(' + str(self._fdRead) + ', 1)',
-      '  _bytes = os.read(0, 1)', # read from stdin
-      'except BlockingIOError as e:',
-      '  if e.errno == 11:', # Resource temporarily unavailable
-      '    import sys',
-      '    sys.exit(e.errno)',
-      '  raise e', # unexpected error
-      'except OSError as e:',
-      '  if e.errno == 9:', # EBADF: Bad file descriptor = pipe is closed
-      '    sys.exit(e.errno)',
-      '  raise e', # unexpected error
-      'os.write(1, _bytes)', # write to stdout
-    ))
-
     args = [
       sys.executable, # python
-      "-c", read_byte_py,
+      "-c", _read_byte_py,
     ]
 
     self._log(f"acquire: read with timeout {timeout} ...")
