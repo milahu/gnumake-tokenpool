@@ -14,31 +14,6 @@ class InvalidToken(Exception):
   pass
 
 
-# pipe one byte from stdin to stdout
-# test: printf + | python -c "import os; os.write(1, os.read(0, 1))"
-# raise OSError("test: asdf") # test exception
-# sys.exit(123) # test error
-# import time; time.sleep(999) # test timeout
-# if e.errno == 11: # Resource temporarily unavailable
-# if e.errno == 9: # EBADF: Bad file descriptor = pipe is closed
-_read_byte_py = """
-import os
-try:
-  _bytes = os.read(0, 1)
-except BlockingIOError as e:
-  if e.errno == 11:
-    import sys
-    sys.exit(e.errno)
-  raise e
-except OSError as e:
-  if e.errno == 9:
-    import sys
-    sys.exit(e.errno)
-  raise e
-os.write(1, _bytes)
-"""
-
-
 def _parse_exception(_bytes):
   print("_bytes", repr(_bytes))
   e_msg = _bytes.strip()
@@ -107,6 +82,8 @@ class JobClient:
     self._maxLoad = None
     self._fileRead = None
     self._fileWrite = None
+
+    self._read_byte_py_path = os.path.dirname(__file__) + "/read_byte.py"
 
     self._debug = bool(os.environ.get("DEBUG_JOBCLIENT"))
     self._debug2 = bool(os.environ.get("DEBUG_JOBCLIENT_2")) # more verbose
@@ -254,7 +231,7 @@ class JobClient:
 
     args = [
       sys.executable, # python
-      "-c", _read_byte_py,
+      self._read_byte_py_path,
     ]
 
     self._log(f"acquire: read with timeout {timeout} ...")
