@@ -15,16 +15,16 @@ class InvalidToken(Exception):
 
 
 def _parse_exception(_bytes):
-  print("_bytes", repr(_bytes))
+  #print("_bytes", repr(_bytes))
   e_msg = _bytes.strip()
   e_trace = b""
   e_name = b""
   parts = e_msg.rsplit(b"\n", 1)
-  print("parts", repr(parts))
+  #print("parts", repr(parts))
   if len(parts) == 2:
     e_trace, e_msg = parts
   parts = e_msg.split(b": ", 1)
-  print("parts", repr(parts))
+  #print("parts", repr(parts))
   if len(parts) == 2:
     e_name, e_msg = parts
   e_class = Exception
