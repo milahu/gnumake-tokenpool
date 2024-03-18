@@ -1,0 +1,136 @@
+name: Sage CI
+
+## This GitHub Actions workflow provides:
+##
+##  - portability testing, by building and testing this project on many platforms
+##
+##  - continuous integration, by building and testing other software
+##    that depends on this project.
+##
+## The testing can be monitored in the "Actions" tab of the GitHub repository.
+##
+## After all jobs have finished (or are canceled) and a short delay,
+## tar files of all logs are made available as "build artifacts".
+##
+## This GitHub Actions workflow uses the portability testing framework
+## of SageMath (https://www.sagemath.org/).  For more information, see
+## https://doc.sagemath.org/html/en/developer/portability_testing.html
+##
+## Deployment of ci-sage.yml in upstream projects
+## is tracked in https://github.com/sagemath/sage/issues/33338
+
+## The workflow consists of two jobs:
+##
+##  - First, it builds a source distribution of the project
+##    and generates a script "update-pkgs.sh".  It uploads them
+##    as a build artifact named upstream.
+##
+##  - Second, it checks out a copy of the SageMath source tree.
+##    It downloads the upstream artifact and replaces the project's
+##    package in the SageMath distribution by the newly packaged one
+##    from the upstream artifact, by running the script "update-pkgs.sh".
+##    Then it builds a small portion of the Sage distribution.
+##
+## Many copies of the second step are run in parallel for each of the tested
+## systems/configurations.
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    paths:
+      - 'pyproject.toml'
+      - 'py/**'
+      - '.github/workflows/ci-sage.yml'
+  push:
+    paths:
+      - 'pyproject.toml'
+      - 'py/**'
+      - '.github/workflows/ci-sage.yml'
+  workflow_dispatch:
+    # Allow to run manually
+
+concurrency:
+  # Cancel previous runs of this workflow for the same branch
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Ubuntu packages to install so that the project can build an sdist
+  DIST_PREREQ:      python3-pip
+  # Name of this project in the Sage distribution
+  SPKG:             gnumake_tokenpool
+  # Remove any patches of gnumake_tokenpool that Sage may be carrying
+  REMOVE_PATCHES:   "*"
+
+jobs:
+
+  dist:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out ${{ env.SPKG }}
+        uses: actions/checkout@v4
+        with:
+          path: build/pkgs/${{ env.SPKG }}/src
+      - name: Install prerequisites
+        run: |
+          sudo DEBIAN_FRONTEND=noninteractive apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install $DIST_PREREQ
+          python3 -m pip install --user build
+      - name: Make sdist, prepare upstream artifact
+        run: |
+          (cd build/pkgs/${{ env.SPKG }}/src && python3 -m build --sdist .) \
+          && mkdir -p upstream && cp build/pkgs/${{ env.SPKG }}/src/dist/*.tar.gz upstream/${{ env.SPKG }}-git.tar.gz \
+          && echo "sage-package create ${{ env.SPKG }} --pypi --source normal && sage-package create ${{ env.SPKG }} --version git --tarball ${{ env.SPKG }}-git.tar.gz --type=standard" > upstream/update-pkgs.sh \
+          && if [ -n "${{ env.REMOVE_PATCHES }}" ]; then echo "(cd ../build/pkgs/${{ env.SPKG }}/patches && rm -f ${{ env.REMOVE_PATCHES }}; :)" >> upstream/update-pkgs.sh; fi \
+          && ls -l upstream/
+      - uses: actions/upload-artifact@v3
+        with:
+          path: upstream
+          name: upstream
+
+  docker-sage-incremental:
+    uses: sagemath/sage/.github/workflows/docker.yml@develop
+    with:
+      #
+      # Use a selection of the platforms for which Sage tests and provides Docker images,
+      # see https://github.com/sagemath/sage/blob/develop/.github/workflows/docker.yml,
+      # selected to give a range of versions of GNU Make,
+      # according to https://repology.org/project/make/versions
+      #
+      tox_system_factors: >-
+        [
+          "centos-7-devtoolset-gcc_11",
+          "ubuntu-bionic-gcc_8",
+          "debian-trixie",
+          "fedora-38",
+        ]
+      tox_packages_factors: >-
+        [
+          "standard",
+        ]
+      #
+      # Work incrementally from published Docker image
+      #
+      incremental:              true
+      free_disk_space:          true
+      from_docker_repository:   ghcr.io/sagemath/sage/
+      from_docker_target:       "with-targets"
+      from_docker_tag:          "dev"
+      #
+      # gnumake-tokenpool is used in Sage when the doctester is run
+      # under control of the build system ('make ptest')
+      #
+      docker_targets:           "with-targets"
+      targets:                  "V=1 gnumake_tokenpool-no-deps pytest-uninstall DEBUG_JOBCLIENT=1 TEST_FILES=src/sage/geometry ptest-nodoc"
+      sage_repo:                sagemath/sage
+      sage_ref:                 develop
+      upstream_artifact:        upstream
+      #
+      # Uncomment below to have the workflow push Docker images with the updated
+      # gnumake-tokenpool to GitHub Packages (ghcr.io).
+      #
+      # We prefix the image name with the SPKG name ("gnumake-tokenpool-") to avoid the error
+      # 'Package "sage-docker-..." is already associated with another repository.' in forks.
+      #
+      #docker_push_repository:   ghcr.io/${{ github.repository }}/gnumake-tokenpool-
+    needs: [dist]
