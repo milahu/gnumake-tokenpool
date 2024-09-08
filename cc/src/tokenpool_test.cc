@@ -14,7 +14,7 @@
 
 #include "tokenpool.h"
 
-#include "test.h"
+#include "gtest/gtest.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -172,7 +172,7 @@ TEST_F(TokenPoolTest, SuccessfulOldSetup) {
   // GNUmake <= 4.1
   CreatePool(AUTH_FORMAT("--jobserver-fds"));
 
-  EXPECT_NE(NULL, tokens_);
+  EXPECT_TRUE(tokens_);
   EXPECT_EQ(kLoadAverageDefault, load_avg_);
 }
 
@@ -180,7 +180,7 @@ TEST_F(TokenPoolTest, SuccessfulNewSetup) {
   // GNUmake => 4.2
   CreateDefaultPool();
 
-  EXPECT_NE(NULL, tokens_);
+  EXPECT_TRUE(tokens_);
   EXPECT_EQ(kLoadAverageDefault, load_avg_);
 }
 
@@ -194,7 +194,7 @@ TEST_F(TokenPoolTest, IgnoreWithJN) {
 TEST_F(TokenPoolTest, HonorLN) {
   CreatePool(AUTH_FORMAT("-l9 --jobserver-auth"));
 
-  EXPECT_NE(NULL, tokens_);
+  EXPECT_TRUE(tokens_);
   EXPECT_EQ(9.0, load_avg_);
 }
 
@@ -203,14 +203,14 @@ TEST_F(TokenPoolTest, SemaphoreNotFound) {
   semaphore_name_ = SEMAPHORE_NAME "_foobar";
   CreateDefaultPool();
 
-  EXPECT_EQ(NULL, tokens_);
+  EXPECT_TRUE(tokens_);
   EXPECT_EQ(kLoadAverageDefault, load_avg_);
 }
 
 TEST_F(TokenPoolTest, TokenIsAvailable) {
   CreateDefaultPool();
 
-  ASSERT_NE(NULL, tokens_);
+  ASSERT_TRUE(tokens_);
   EXPECT_EQ(kLoadAverageDefault, load_avg_);
 
   EXPECT_TRUE(tokens_->TokenIsAvailable((ULONG_PTR)tokens_));
@@ -219,7 +219,7 @@ TEST_F(TokenPoolTest, TokenIsAvailable) {
 TEST_F(TokenPoolTest, MonitorFD) {
   CreateDefaultPool();
 
-  ASSERT_NE(NULL, tokens_);
+  ASSERT_TRUE(tokens_);
   EXPECT_EQ(kLoadAverageDefault, load_avg_);
 
   EXPECT_EQ(fds_[0], tokens_->GetMonitorFd());
@@ -229,7 +229,7 @@ TEST_F(TokenPoolTest, MonitorFD) {
 TEST_F(TokenPoolTest, ImplicitToken) {
   CreateDefaultPool();
 
-  ASSERT_NE(NULL, tokens_);
+  ASSERT_TRUE(tokens_);
   EXPECT_EQ(kLoadAverageDefault, load_avg_);
 
   EXPECT_TRUE(tokens_->Acquire());
@@ -242,7 +242,7 @@ TEST_F(TokenPoolTest, ImplicitToken) {
 TEST_F(TokenPoolTest, TwoTokens) {
   CreateDefaultPool();
 
-  ASSERT_NE(NULL, tokens_);
+  ASSERT_TRUE(tokens_);
   EXPECT_EQ(kLoadAverageDefault, load_avg_);
 
   // implicit token
@@ -286,7 +286,7 @@ TEST_F(TokenPoolTest, TwoTokens) {
 TEST_F(TokenPoolTest, Clear) {
   CreateDefaultPool();
 
-  ASSERT_NE(NULL, tokens_);
+  ASSERT_TRUE(tokens_);
   EXPECT_EQ(kLoadAverageDefault, load_avg_);
 
   // implicit token
@@ -328,17 +328,17 @@ TEST_F(TokenPoolTest, Clear) {
 TEST_F(TokenPoolTest, NoPoolForSerialBuild) {
   CreateMaster(1);
 
-  EXPECT_EQ(NULL, tokens_);
+  EXPECT_FALSE(tokens_);
 }
 
 TEST_F(TokenPoolTest, MasterNoLoadAvg) {
   // kLoadAverageDefault <= 0.0f -> no load averaging
   CreateMaster(2);
 
-  ASSERT_NE(NULL, tokens_);
+  ASSERT_TRUE(tokens_);
 
   const char *env = ENVIRONMENT_GET();
-  ASSERT_NE(NULL, env);
+  ASSERT_TRUE(env);
 
   EXPECT_EQ(env,  strstr(env, "--jobserver-auth="));
   EXPECT_EQ(NULL, strstr(env, " -l"));
@@ -350,13 +350,13 @@ TEST_F(TokenPoolTest, MasterWithLoadAvg) {
   load_avg_ = 3.1415f;
   CreateMaster(3);
 
-  ASSERT_NE(NULL, tokens_);
+  ASSERT_TRUE(tokens_);
 
   const char *env = ENVIRONMENT_GET();
-  ASSERT_NE(NULL, env);
+  ASSERT_TRUE(env);
 
   EXPECT_EQ(env,  strstr(env, "--jobserver-auth="));
-  EXPECT_NE(NULL, strstr(env, " -l3.1415"));
+  EXPECT_TRUE(strstr(env, " -l3.1415"));
 
   CheckTokens(env, 3);
 }

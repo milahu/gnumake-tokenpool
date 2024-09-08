@@ -1,0 +1,19 @@
+name: Test CC library
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install LLVM and Clang
+        uses: KyleMayes/install-llvm-action@v2
+        with:
+          version: "18"
+      - run: cmake cc/src -B build
+      - run: cmake --build build
+      - run: ctest  --test-dir build/
+  

@@ -12,48 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "tokenpool-gnu-make.h"
+#include "tokenpool-gnu-make-posix.h"
 
 #include <errno.h>
 #include <fcntl.h>
 #include <poll.h>
 #include <unistd.h>
-#include <signal.h>
 #include <sys/time.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-
-// TokenPool implementation for GNU make jobserver - POSIX implementation
-// (http://make.mad-scientist.net/papers/jobserver-implementation/)
-struct GNUmakeTokenPoolPosix : public GNUmakeTokenPool {
-  GNUmakeTokenPoolPosix();
-  virtual ~GNUmakeTokenPoolPosix();
-
-  virtual int GetMonitorFd();
-
-  virtual const char* GetEnv(const char* name) { return getenv(name); }
-  virtual bool SetEnv(const char* name, const char* value) {
-    return setenv(name, value, 1) == 0;
-  }
-  virtual bool ParseAuth(const char* jobserver);
-  virtual bool CreatePool(int parallelism, std::string* auth);
-  virtual int AcquireToken();
-  virtual bool ReleaseToken(int token);
-
- private:
-  int rfd_;
-  int wfd_;
-
-  struct sigaction old_act_;
-  bool restore_;
-
-  static int dup_rfd_;
-  static void CloseDupRfd(int signum);
-
-  bool CheckFd(int fd);
-  bool SetAlarmHandler();
-};
 
 GNUmakeTokenPoolPosix::GNUmakeTokenPoolPosix() : rfd_(-1), wfd_(-1), restore_(false) {
 }
