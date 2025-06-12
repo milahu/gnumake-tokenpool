@@ -235,9 +235,9 @@ class JobClient:
       finally:
         signal.setitimer(signal.ITIMER_REAL, 0) # clear timer. unix only
 
-    #if len(buffer) == 0:
-    #  return None
-    assert len(buffer) == 1
+    if len(buffer) == 0:
+      self._log(f"acquire: read failed: buffer is empty")
+      return None
 
     token = ord(buffer) # byte -> int8
     self._log(f"acquire: read ok. token = {token}")
