@@ -4,7 +4,7 @@ from contextlib import contextmanager
 from datetime import datetime
 from typing import List, Any, Iterator, Never
 
-__version__ = '0.0.7'
+__version__ = '0.0.8'
 
 
 class NoJobServer(Exception):
