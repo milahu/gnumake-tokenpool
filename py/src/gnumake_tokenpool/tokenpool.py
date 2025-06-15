@@ -205,6 +205,7 @@ class JobClient:
       self._log(f"acquire: read timeout")
       assert self._fdReadDup
       os.close(self._fdReadDup)
+      self._fdReadDup = None
 
     # SIGALRM = timer has fired = read timeout
     with self._changesignal(signal.SIGALRM, read_timeout_handler):
@@ -236,8 +237,8 @@ class JobClient:
         signal.setitimer(signal.ITIMER_REAL, 0) # clear timer. unix only
 
     if len(buffer) == 0:
-      self._log(f"acquire: read failed: buffer is empty")
-      return None
+      # the only way to not read a byte is the timeout handler, which causes the OSError handled above
+      raise AssertionError('buffer cannot be empty without calling timeout handler')
 
     token = ord(buffer) # byte -> int8
     self._log(f"acquire: read ok. token = {token}")
